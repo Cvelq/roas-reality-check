@@ -85,6 +85,13 @@
   input.has-unit{padding-left:30px}
   input.has-unit-right{padding-right:34px}
   input[type="number"]:focus-visible{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  select{
+    width:100%;padding:12px 38px 12px 14px;font-family:var(--mono);font-size:15px;color:var(--ink);
+    background:var(--field) url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235B6A62'/%3E%3C/svg%3E") no-repeat right 14px center;
+    border:1px solid var(--line);border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;
+  }
+  select:focus-visible{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  #custom-fee-wrap{margin-top:10px}
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   input[type="number"]{-moz-appearance:textfield;appearance:textfield}
@@ -239,9 +246,16 @@
       <p class="hint">Pick, pack and postage, per order shipped.</p>
     </div>
     <div class="fld">
-      <label for="fees">Payment &amp; platform fees</label>
-      <div class="inwrap"><input class="has-unit-right" type="number" id="fees" value="3" min="0" max="20" step="0.1" inputmode="decimal"><span class="unit right">%</span></div>
-      <p class="hint">Processor plus platform, as a share of the transaction.</p>
+      <label for="platform">Payment processing</label>
+      <select id="platform">
+        <option value="shopify-basic" selected>Shopify &middot; Basic (2.9% + 30&cent;)</option>
+        <option value="shopify-grow">Shopify &middot; Grow (2.7% + 30&cent;)</option>
+        <option value="shopify-advanced">Shopify &middot; Advanced (2.5% + 30&cent;)</option>
+        <option value="woo">WooCommerce &middot; WooPayments / Stripe (2.9% + 30&cent;)</option>
+        <option value="custom">Custom rate&hellip;</option>
+      </select>
+      <div class="inwrap" id="custom-fee-wrap" hidden><input class="has-unit-right" type="number" id="fees" value="3" min="0" max="20" step="0.1" inputmode="decimal"><span class="unit right">%</span></div>
+      <p class="hint" id="platform-hint">Published online card rates, as of July 2026.</p>
     </div>
     <div class="fld">
       <label for="roas">Current blended ROAS</label>
@@ -367,6 +381,14 @@
   var $ = function(id){ return document.getElementById(id); };
   var inputs = ["aov","cogs","ship","fees","roas","margin","ret","disc","budget","tests"];
 
+  // Published online card rates, as of July 2026.
+  var PLATFORMS = {
+    "shopify-basic":    {label:"Shopify Basic",    pct:0.029, fixed:0.30},
+    "shopify-grow":     {label:"Shopify Grow",     pct:0.027, fixed:0.30},
+    "shopify-advanced": {label:"Shopify Advanced", pct:0.025, fixed:0.30},
+    "woo":              {label:"WooPayments / Stripe", pct:0.029, fixed:0.30}
+  };
+
   var fmt$ = function(n,dp){
     if(dp===undefined) dp = 0;
     var neg = n < 0;
@@ -391,7 +413,9 @@
     var aov   = Math.max(num("aov",0), 0.01);
     var cogsP = Math.min(Math.max(num("cogs",0),0),95)/100;
     var ship  = Math.max(num("ship",0),0);
-    var feesP = Math.min(Math.max(num("fees",0),0),20)/100;
+    var platform = PLATFORMS[$("platform").value] || null;
+    var feesP = platform ? platform.pct : Math.min(Math.max(num("fees",0),0),20)/100;
+    var feeFixed = platform ? platform.fixed : 0;
     var roas  = Math.max(num("roas",0), 0.01);
     var mTgt  = Math.min(Math.max(num("margin",0),0),60)/100;
     var retP  = Math.min(Math.max(num("ret",0),0),60)/100;
@@ -407,7 +431,7 @@
     // Costs per order placed: product cost (on gross AOV), shipping, processing on collected amount.
     var cogs$  = aov * cogsP;
     var ship$  = ship;
-    var fees$  = netAOV * feesP;
+    var fees$  = netAOV * feesP + feeFixed;
     // Contribution per order placed.
     var contrib = keptRev - cogs$ - ship$ - fees$;
     // Contribution margin as share of collected revenue.
@@ -485,6 +509,7 @@
       "<p>Everything below uses your numbers as typed. Change an input and this rewrites.</p>" +
       "<div class='frm'>Collected revenue per order  = $" + aov.toFixed(2) + " x (1 - " + (discP*100).toFixed(1) + "% discount) = " + fmt$(netAOV,2) + "\n" +
       "Kept after refunds           = " + fmt$(netAOV,2) + " x (1 - " + (retP*100).toFixed(1) + "% returns) = " + fmt$(keptRev,2) + "\n" +
+      "Processing fee per order     = " + (feesP*100).toFixed(1) + "% x " + fmt$(netAOV,2) + (feeFixed > 0 ? " + " + fmt$(feeFixed,2) : "") + " = " + fmt$(fees$,2) + (platform ? "  (" + platform.label + ")" : "  (custom rate)") + "\n" +
       "Costs per order              = " + fmt$(cogs$,2) + " product + " + fmt$(ship$,2) + " shipping + " + fmt$(fees$,2) + " fees\n" +
       "Contribution per order       = " + fmt$(contrib,2) + "  (" + fmtP(cmPct*100,1) + " of collected revenue)\n" +
       "Break-even ROAS              = 1 / " + fmtP(cmPct*100,1) + " = " + (isFinite(beRoas)?fmtX(beRoas):"n/a") + "\n" +
@@ -493,7 +518,9 @@
       "<ul>" +
       "<li>ROAS here means blended: total store revenue over total Meta spend. Platform-attributed ROAS overstates what ads earn.</li>" +
       "<li>Returned orders refund the collected price; product and shipping costs on returned units are treated as not recovered. Conservative on purpose.</li>" +
-      "<li>Processing fees are charged on the collected amount and not refunded on returns.</li>" +
+      "<li>" + (platform
+        ? "Processing uses " + platform.label + "'s published online card rate as of July 2026 (" + (feesP*100).toFixed(1) + "% + " + Math.round(feeFixed*100) + "&cent; per transaction), charged on the collected amount and not refunded on returns. International cards and currency conversion add roughly 1 to 1.5% on top."
+        : "Processing uses your custom rate, charged on the collected amount and not refunded on returns.") + "</li>" +
       "<li>Fixed costs (team, tools, rent) are not in this number. Your true all-in break-even is higher.</li>" +
       "</ul>";
 
@@ -563,6 +590,14 @@
 
   inputs.forEach(function(id){
     $(id).addEventListener("input", calc);
+  });
+  $("platform").addEventListener("change", function(){
+    var custom = $("platform").value === "custom";
+    $("custom-fee-wrap").hidden = !custom;
+    $("platform-hint").textContent = custom
+      ? "Processor plus platform, as a share of the transaction."
+      : "Published online card rates, as of July 2026.";
+    calc();
   });
   calc();
 })();
