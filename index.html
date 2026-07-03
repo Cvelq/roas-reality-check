@@ -344,7 +344,7 @@
 <section class="part" id="part2">
   <div class="part-rule"><span class="tag">Part 2</span></div>
   <h2>The Coin-Flip Test</h2>
-  <p class="part-intro">Every creative test is read by counting purchases. Your budget caps how many purchases a week you have to count with, and that cap decides whether your winner calls are real or noise.</p>
+  <p class="part-intro">Testing more finds more winners. But only if each creative gets enough spend to prove itself, and only if you don't crown winners off tiny reads. Your budget sets both ceilings: how many creatives you can screen, and how many winners you can confirm.</p>
 
   <div class="grid">
     <div class="fld">
@@ -365,12 +365,24 @@
   </div>
 
   <div class="results" id="res2" aria-live="polite">
-    <div class="res-head"><span>Result &middot; budget-limited ceiling</span><span id="conv-readout"></span></div>
+    <div class="res-head"><span>Result &middot; budget-limited ceilings</span><span id="conv-readout"></span></div>
+    <div class="res-main">
+      <div class="res-cell">
+        <div class="res-label">Screening capacity</div>
+        <div class="res-num" id="screen-cap">&ndash;</div>
+        <div class="res-sub">Creatives per week that can get a fair kill-or-keep audition.</div>
+      </div>
+      <div class="res-cell">
+        <div class="res-label">Confirmation capacity</div>
+        <div class="res-num" id="confirm-cap">&ndash;</div>
+        <div class="res-sub">Winners per week you can actually crown (~50 purchases each).</div>
+      </div>
+    </div>
     <div class="gauge">
       <div class="bands">
-        <div class="band" id="band-good">Readable</div>
-        <div class="band" id="band-warn">Directional</div>
-        <div class="band" id="band-bad">Coin-flip</div>
+        <div class="band" id="band-good">Room to screen</div>
+        <div class="band" id="band-warn">Stretched</div>
+        <div class="band" id="band-bad">Over capacity</div>
       </div>
     </div>
     <div class="verdict" id="verdict2">
@@ -389,7 +401,7 @@
 <!-- ============ REFRAME + CTA ============ -->
 <section class="reframe">
   <h2>Reading a test is not the same as learning from it.</h2>
-  <p>A readable test tells you which ad won this week. It does not tell you why it won, which angle to push next, or what three months of tests have already ruled out. That is a learning system, and it is the difference between creative that compounds and creative that starts from zero every campaign.</p>
+  <p>A screen tells you which creatives to kill. A confirmed winner tells you which ad won this week. Neither tells you why it won, which angle to push next, or what three months of tests have already ruled out. That is a learning system, and it is the difference between creative that compounds and creative that starts from zero every campaign.</p>
   <p>The numbers above are the first page of that system. The rest is finding where your funnel leaks the margin this calculator just measured, and running tests that feed every result back into the next brief.</p>
 
   <div class="cta">
@@ -431,11 +443,15 @@
   var fmtX = function(n){ return (Math.round(n*100)/100).toFixed(2); };
   var fmtP = function(n,dp){ return (Math.round(n*Math.pow(10,dp===undefined?1:dp))/Math.pow(10,dp===undefined?1:dp)) + "%"; };
 
-  // Statistical band edges: conversions needed per creative to separate signal from noise.
-  // Basis: two-proportion power math at 90% confidence / 80% power.
-  // ~55 conversions resolves a ~50% relative performance gap; ~20 resolves only a ~2x gap.
-  var READABLE_CONV = 50;
-  var DIRECTIONAL_CONV = 20;
+  // Two ceilings, two different statistical bars:
+  // SCREEN: a fair kill-or-keep audition costs ~2.5 CPAs of spend (Poisson: a creative matching
+  // account-average performance shows zero purchases after 2.5 CPAs only ~8% of the time).
+  // Below ~1.5 CPAs per creative, even a kill call is guesswork.
+  // CONFIRM: crowning a winner needs ~50 purchases on that creative (two-proportion power math
+  // at 90% confidence / 80% power resolves a ~50% relative gap).
+  var CONFIRM_CONV = 50;
+  var SCREEN_CPAS = 2.5;
+  var STRETCH_CPAS = 1.5;
 
   function num(id, fallback){
     var v = parseFloat($(id).value);
@@ -569,35 +585,42 @@
     var hasAttr = isFinite(attr) && attr > 0;
     var weeklyConv = hasAttr ? attr : derivedWeekly;
     var cpaShown = hasAttr ? (budget * 7) / attr : cpa;
-    var readableCeil = Math.floor(weeklyConv / READABLE_CONV);
-    var directionalCeil = Math.floor(weeklyConv / DIRECTIONAL_CONV);
+    var screenCeil = Math.floor(weeklyConv / SCREEN_CPAS);
+    var confirmCeil = Math.floor(weeklyConv / CONFIRM_CONV);
+    // Spend each creative gets, measured in CPAs, if the week's budget spreads across the tests.
+    var cpasPerCreative = tests > 0 ? weeklyConv / tests : weeklyConv;
 
     if(!hasAttr){ $("attrconv").placeholder = "~" + Math.round(derivedWeekly) + " (estimated)"; }
     $("conv-readout").textContent = "~" + Math.round(weeklyConv) + " purchases/week at ~" + fmt$(cpaShown,0) + " per order" +
       (hasAttr ? " · your Ads Manager number" : " · estimated from blended ROAS");
+    $("screen-cap").textContent = "~" + screenCeil + "/wk";
+    $("confirm-cap").textContent = confirmCeil >= 1 ? "~" + confirmCeil + "/wk" : "<1/wk";
+
+    var confirmLine = confirmCeil >= 1
+      ? "your budget confirms about <strong>" + confirmCeil + "</strong> winner" + (confirmCeil===1?"":"s") + " a week at ~" + CONFIRM_CONV + " purchases each. Crown nothing off a screen."
+      : "your budget can't fully confirm a winner inside a week. Let a survivor keep collecting for 2 or more weeks before you crown and scale it.";
 
     var vTag, vP1, vP2, vClass, bandId;
-    var perCreative = tests > 0 ? weeklyConv / tests : weeklyConv;
 
     if(tests === 0){
       vTag = "No tests running"; vClass = "v-warn"; bandId = "band-warn";
-      vP1 = "You're not launching new creatives, so nothing is being read at all. At your volume your budget could support up to <strong>" + readableCeil + "</strong> readable test" + (readableCeil===1?"":"s") + " per week.";
-      vP2 = readableCeil === 0 ? "At current volume, run one test at a time and let it collect for 2 or more weeks before judging." : "Fatigue is the cost of not testing: today's winner decays whether or not its replacement exists.";
-    } else if(readableCeil >= tests){
-      vTag = "Readable"; vClass = "v-good"; bandId = "band-good";
-      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Across <strong>" + tests + "</strong> new creative" + (tests===1?"":"s") + ", each can collect about <strong>" + Math.round(perCreative) + "</strong>, clear of the ~" + READABLE_CONV + " needed to separate a meaningfully better ad from noise.";
-      vP2 = "Your cadence fits your budget. The open question is no longer whether you can read tests. It's whether each result changes what you launch next.";
-    } else if(directionalCeil >= tests){
-      vTag = "Directional"; vClass = "v-warn"; bandId = "band-warn";
-      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Across <strong>" + tests + "</strong> new creatives, each collects about <strong>" + Math.round(perCreative) + "</strong>. Enough to spot a 2x winner, not enough to trust anything subtler.";
-      vP2 = "Your budget can fully read about <strong>" + readableCeil + "</strong> test" + (readableCeil===1?"":"s") + " a week. Cutting cadence toward that number turns weak reads into real ones without spending a dollar more.";
+      vP1 = "You're not launching new creatives, so nothing is being screened at all. Your budget could give a fair audition to up to <strong>" + screenCeil + "</strong> creative" + (screenCeil===1?"":"s") + " a week.";
+      vP2 = "Fatigue is the cost of not testing: today's winner decays whether or not its replacement exists.";
+    } else if(cpasPerCreative >= SCREEN_CPAS){
+      vTag = "Room to screen"; vClass = "v-good"; bandId = "band-good";
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Testing <strong>" + tests + "</strong> new creative" + (tests===1?"":"s") + " gives each one a fair audition (about <strong>" + (Math.round(cpasPerCreative*10)/10) + "</strong> CPAs of spend to prove itself). You have room to screen up to <strong>" + screenCeil + "</strong> a week, and volume is how outliers get found.";
+      vP2 = "The line to hold: screening is not confirming. A screen tells you what to kill; " + confirmLine;
+    } else if(cpasPerCreative >= STRETCH_CPAS){
+      vTag = "Stretched"; vClass = "v-warn"; bandId = "band-warn";
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Across <strong>" + tests + "</strong> new creatives, each gets about <strong>" + (Math.round(cpasPerCreative*10)/10) + "</strong> CPAs of spend. Below ~" + SCREEN_CPAS + ", an audition can't reliably prove a creative dead, so even your kill calls start guessing.";
+      vP2 = "Your budget screens about <strong>" + screenCeil + "</strong> creative" + (screenCeil===1?"":"s") + " a week fairly. Trim toward that number or raise test budget. And " + confirmLine;
     } else {
-      vTag = "Coin-flip"; vClass = "v-bad"; bandId = "band-bad";
-      var wasted = tests > 0 ? budget * 30.4 * Math.max(tests - readableCeil, 0) / tests : 0;
-      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Split across <strong>" + tests + "</strong> new creatives, each collects about <strong>" + Math.round(perCreative) + "</strong>. Below ~" + DIRECTIONAL_CONV + ", calling winners at that count is statistically closer to guessing than reading.";
-      vP2 = readableCeil >= 1
-        ? "Even if every purchase counted toward testing, your budget can fully read about <strong>" + readableCeil + "</strong> test" + (readableCeil===1?"":"s") + " a week. If budget spreads evenly across your current " + tests + ", roughly <strong>" + fmt$(wasted) + "</strong>/month is going to tests that can't be read. Fewer, bigger swings beat more, unreadable ones."
-        : "At your volume, even one test a week can't hit a readable count. Run one big swing at a time, let it collect for 2 or more weeks, and judge only large gaps.";
+      vTag = "Over capacity"; vClass = "v-bad"; bandId = "band-bad";
+      var unfinished = tests > 0 ? budget * 30.4 * Math.max(tests - screenCeil, 0) / tests : 0;
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Split across <strong>" + tests + "</strong> new creatives, each gets about <strong>" + (Math.round(cpasPerCreative*10)/10) + "</strong> CPAs of spend. At that level most creatives can't even prove they're dead, let alone win.";
+      vP2 = screenCeil >= 1
+        ? "Your budget gives a fair audition to about <strong>" + screenCeil + "</strong> a week. If spend spreads evenly across your current " + tests + ", roughly <strong>" + fmt$(unfinished) + "</strong>/month goes to auditions that can't finish. Fewer, fairer auditions beat more, unfinished ones. And " + confirmLine
+        : "At your volume, even one creative a week can't get a fair audition. Run one at a time, let it collect for 2 or more weeks, and judge only large gaps.";
     }
 
     ["band-good","band-warn","band-bad"].forEach(function(b){
@@ -617,13 +640,15 @@
       "<div class='frm'>" + (hasAttr
         ? "Purchases per week          = " + Math.round(attr) + "  (your Ads Manager number)\nSpend per order             = $" + budget.toFixed(0) + "/day x 7 / " + Math.round(attr) + " = " + fmt$(cpaShown,2) + "\n"
         : "Spend per order (blended)   = " + fmt$(netAOV,2) + " / " + fmtX(roas) + " ROAS = " + fmt$(cpa,2) + "\nPurchases per week          = $" + budget.toFixed(0) + "/day x 7 / " + fmt$(cpa,2) + " = ~" + Math.round(weeklyConv) + "  (estimated)\n") +
-      "Fully readable tests/week   = " + Math.round(weeklyConv) + " / " + READABLE_CONV + " per creative = " + readableCeil + "\n" +
-      "Directional tests/week      = " + Math.round(weeklyConv) + " / " + DIRECTIONAL_CONV + " per creative = " + directionalCeil + "</div>" +
-      "<p>Why " + READABLE_CONV + " and " + DIRECTIONAL_CONV + ": reading a creative test means comparing conversion counts, and counts carry noise of roughly the square root of their size. Standard power math (two-proportion comparison at 90% confidence, 80% power) says a creative needs about 50 to 60 purchases before a ~50% performance gap reliably separates from luck. At about 20, only a 2x gap is readable. Below that, a winner call is a coin flip with extra steps.</p>" +
+      "Screening capacity          = " + Math.round(weeklyConv) + " / " + SCREEN_CPAS + " CPAs per audition = ~" + screenCeil + " creatives/week\n" +
+      "Confirmation capacity       = " + Math.round(weeklyConv) + " / " + CONFIRM_CONV + " purchases per winner = " + (confirmCeil >= 1 ? "~" + confirmCeil + "/week" : "<1/week") +
+      (tests > 0 ? "\nYour cadence                = " + tests + " creatives -> ~" + (Math.round(cpasPerCreative*10)/10) + " CPAs of spend each" : "") + "</div>" +
+      "<p>Why " + SCREEN_CPAS + " CPAs and " + CONFIRM_CONV + " purchases: screening and confirming answer different questions. A fair kill-or-keep audition costs about " + SCREEN_CPAS + " CPAs of spend, because a creative performing at your account average shows zero purchases after that much spend only ~8% of the time, so zero sales by then is a defensible kill. Crowning a winner is stricter: purchase counts carry noise of roughly the square root of their size, and standard power math (two-proportion comparison at 90% confidence, 80% power) needs about 50 purchases on a creative before a ~50% performance gap reliably separates from luck. Calling a winner off a handful of purchases is a coin flip with extra steps.</p>" +
       "<p class='asm'>Assumptions, stated so you can disagree with them</p>" +
       "<ul>" +
-      "<li>This is a ceiling: it assumes every purchase your budget buys counts toward reading tests. Real accounts split spend between proven ads and tests, so your true read rate is lower.</li>" +
-      "<li>It also assumes test budget spreads roughly evenly across new creatives, which takes a deliberate test structure rather than letting delivery decide.</li>" +
+      "<li>None of this says test less. The best testers run far more volume than average; they run it through cheap screens with kill criteria, and confirm before they scale. The mistake this flags is not high cadence, it is crowning winners off screens.</li>" +
+      "<li>Both capacities are ceilings: they assume every purchase your budget buys counts toward testing. Real accounts split spend between proven ads and tests, so your true capacity is lower.</li>" +
+      "<li>Screening capacity assumes you cap each new creative at roughly " + SCREEN_CPAS + " CPAs of spend before the kill-or-keep call, a deliberate structure. Left alone, Meta's delivery concentrates spend and auditions fewer creatives than this ceiling implies.</li>" +
       "<li>Meta's learning-phase guidance (~50 conversions per ad set per week) is about delivery stability, not winner-calling. The thresholds here come from significance math, which is the stricter and more honest bar.</li>" +
       "<li>" + (hasAttr
         ? "You entered your Ads Manager purchase count, the stricter input. The estimate path (blended ROAS) would count organic and repeat revenue as if ads drove it."
