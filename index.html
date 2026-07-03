@@ -92,6 +92,16 @@
   }
   select:focus-visible{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
   #custom-fee-wrap{margin-top:10px}
+  .cogs-row{display:flex;gap:8px;align-items:stretch}
+  .cogs-row .inwrap{flex:1}
+  .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{
+    font-family:var(--mono);font-size:14px;padding:0 13px;border:none;cursor:pointer;
+    background:var(--field);color:var(--muted);
+  }
+  .seg button + button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--ink);color:var(--paper);font-weight:700}
+  .seg button:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   input[type="number"]{-moz-appearance:textfield;appearance:textfield}
@@ -237,8 +247,14 @@
     </div>
     <div class="fld">
       <label for="cogs">Product cost (COGS)</label>
-      <div class="inwrap"><input class="has-unit-right" type="number" id="cogs" value="35" min="0" max="95" step="1" inputmode="decimal"><span class="unit right">%</span></div>
-      <p class="hint">As a share of order value.</p>
+      <div class="cogs-row">
+        <div class="inwrap"><span class="unit" id="cogs-unit-l" hidden>$</span><input class="has-unit-right" type="number" id="cogs" value="35" min="0" step="1" inputmode="decimal"><span class="unit right" id="cogs-unit-r">%</span></div>
+        <div class="seg" role="group" aria-label="COGS unit">
+          <button type="button" id="cogs-pct" class="on" aria-pressed="true">%</button>
+          <button type="button" id="cogs-usd" aria-pressed="false">$</button>
+        </div>
+      </div>
+      <p class="hint" id="cogs-hint">As a share of order value.</p>
     </div>
     <div class="fld">
       <label for="ship">Shipping &amp; fulfillment per order</label>
@@ -411,7 +427,10 @@
 
   function calc(){
     var aov   = Math.max(num("aov",0), 0.01);
-    var cogsP = Math.min(Math.max(num("cogs",0),0),95)/100;
+    var cogsIsUsd = $("cogs-usd").classList.contains("on");
+    var cogsP = cogsIsUsd
+      ? Math.max(num("cogs",0),0) / aov
+      : Math.min(Math.max(num("cogs",0),0),95)/100;
     var ship  = Math.max(num("ship",0),0);
     var platform = PLATFORMS[$("platform").value] || null;
     var feesP = platform ? platform.pct : Math.min(Math.max(num("fees",0),0),20)/100;
@@ -510,6 +529,7 @@
       "<div class='frm'>Collected revenue per order  = $" + aov.toFixed(2) + " x (1 - " + (discP*100).toFixed(1) + "% discount) = " + fmt$(netAOV,2) + "\n" +
       "Kept after refunds           = " + fmt$(netAOV,2) + " x (1 - " + (retP*100).toFixed(1) + "% returns) = " + fmt$(keptRev,2) + "\n" +
       "Processing fee per order     = " + (feesP*100).toFixed(1) + "% x " + fmt$(netAOV,2) + (feeFixed > 0 ? " + " + fmt$(feeFixed,2) : "") + " = " + fmt$(fees$,2) + (platform ? "  (" + platform.label + ")" : "  (custom rate)") + "\n" +
+      "Product cost per order       = " + (cogsIsUsd ? fmt$(cogs$,2) + "  (entered in dollars)" : (cogsP*100).toFixed(1) + "% x $" + aov.toFixed(2) + " = " + fmt$(cogs$,2)) + "\n" +
       "Costs per order              = " + fmt$(cogs$,2) + " product + " + fmt$(ship$,2) + " shipping + " + fmt$(fees$,2) + " fees\n" +
       "Contribution per order       = " + fmt$(contrib,2) + "  (" + fmtP(cmPct*100,1) + " of collected revenue)\n" +
       "Break-even ROAS              = 1 / " + fmtP(cmPct*100,1) + " = " + (isFinite(beRoas)?fmtX(beRoas):"n/a") + "\n" +
@@ -591,6 +611,29 @@
   inputs.forEach(function(id){
     $(id).addEventListener("input", calc);
   });
+  function setCogsMode(usd){
+    var wasUsd = $("cogs-usd").classList.contains("on");
+    if(wasUsd === usd){ return; }
+    var aov = Math.max(parseFloat($("aov").value) || 0.01, 0.01);
+    var v = parseFloat($("cogs").value);
+    if(isFinite(v)){
+      $("cogs").value = usd ? (Math.round(v/100*aov*100)/100) : (Math.round(v/aov*100*10)/10);
+    }
+    $("cogs-usd").classList.toggle("on", usd);
+    $("cogs-pct").classList.toggle("on", !usd);
+    $("cogs-usd").setAttribute("aria-pressed", usd ? "true" : "false");
+    $("cogs-pct").setAttribute("aria-pressed", usd ? "false" : "true");
+    $("cogs-unit-l").hidden = !usd;
+    $("cogs-unit-r").hidden = usd;
+    $("cogs").classList.toggle("has-unit", usd);
+    $("cogs").classList.toggle("has-unit-right", !usd);
+    $("cogs").step = usd ? "0.5" : "1";
+    $("cogs-hint").textContent = usd ? "Per order, in dollars." : "As a share of order value.";
+    calc();
+  }
+  $("cogs-usd").addEventListener("click", function(){ setCogsMode(true); });
+  $("cogs-pct").addEventListener("click", function(){ setCogsMode(false); });
+
   $("platform").addEventListener("change", function(){
     var custom = $("platform").value === "custom";
     $("custom-fee-wrap").hidden = !custom;
