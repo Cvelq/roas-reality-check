@@ -148,6 +148,26 @@
   .res-line strong{font-variant-numeric:tabular-nums}
   .good{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)}
 
+  .pill{
+    display:inline-block;padding:4px 12px;border-radius:999px;margin-right:8px;
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  }
+  .pill-good{background:var(--green-soft);color:var(--green);border:1px solid var(--green)}
+  .pill-warn{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber)}
+  .pill-bad{background:var(--red-soft);color:var(--red);border:1px solid var(--red)}
+
+  .po{padding:18px;border-bottom:1px solid var(--line)}
+  .po-title{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .po-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+  .po-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .po-row.total{border-bottom:none;border-top:1px solid var(--ink);font-weight:700;margin-top:2px}
+
+  .live-hint{
+    font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:-16px 0 24px;
+    display:flex;gap:8px;align-items:center;
+  }
+  .live-hint::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+
   /* ---------- waterfall ---------- */
   .wf{padding:18px}
   .wf-title{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
@@ -249,6 +269,7 @@
   <div class="part-rule"><span class="tag">Part 1</span></div>
   <h2>Your real break-even ROAS</h2>
   <p class="part-intro">Break-even is not 1 divided by gross margin. Discounts, returns, shipping and fees all eat the number quietly. Example figures are pre-filled; replace them with yours.</p>
+  <p class="live-hint">Everything below recalculates live as you type.</p>
 
   <div class="grid">
     <div class="fld">
@@ -328,6 +349,7 @@
     </div>
     <div class="res-line" id="perk-line"></div>
     <div class="res-line" id="stage1-verdict"></div>
+    <div class="po" id="po-table"></div>
     <div class="wf">
       <div class="wf-title">Where each $100 of collected revenue goes</div>
       <div class="wf-bar" id="wf-bar" role="img" aria-label="Revenue breakdown bar"></div>
@@ -505,7 +527,7 @@
     if(!isFinite(beRoas)){
       $("perk-line").innerHTML = "Your unit costs exceed collected revenue per order. No ROAS is profitable at these numbers; the fix is price, cost or offer, not ads.";
       $("perk-line").className = "res-line bad";
-      $("stage1-verdict").innerHTML = "";
+      $("stage1-verdict").innerHTML = "<span class='pill pill-bad'>No profitable ROAS</span>";
       $("stage1-verdict").className = "res-line";
     } else {
       var cls = profitPerK >= 0 ? "good" : "bad";
@@ -515,17 +537,32 @@
       $("perk-line").className = "res-line";
 
       var v1;
-      var v1cls = "res-line";
       if(roas < beRoas){
-        v1 = "<strong class='bad'>Below break-even.</strong> Growth at this ROAS costs money on every order. Scaling spend scales the loss.";
+        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss.";
       } else if(isFinite(tgtRoas) && roas < tgtRoas){
-        v1 = "<strong class='warn'>Above water, below target.</strong> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account.";
+        v1 = "<span class='pill pill-warn'>Above water, below target</span> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account.";
       } else {
-        v1 = "<strong class='good'>Your margin math holds.</strong> The next ceiling is whether your testing compounds. That is Part 2.";
+        v1 = "<span class='pill pill-good'>Margin math holds</span> The next ceiling is whether your testing compounds. That is Part 2.";
       }
       $("stage1-verdict").innerHTML = v1;
-      $("stage1-verdict").className = v1cls;
+      $("stage1-verdict").className = "res-line";
     }
+
+    // Per-order breakdown, in the founder's own unit.
+    var spendPO = netAOV / roas;
+    var profitPO = contrib - spendPO;
+    var retCost = netAOV - keptRev;
+    var poRows =
+      "<div class='po-title'>Per order, in your dollars</div>" +
+      "<div class='po-row'><span>Collected per order" + (discP > 0 ? " (after " + (discP*100).toFixed(1) + "% discount)" : "") + "</span><span class='v'>" + fmt$(netAOV,2) + "</span></div>" +
+      "<div class='po-row'><span>Product cost</span><span class='v'>&minus;" + fmt$(cogs$,2) + "</span></div>" +
+      "<div class='po-row'><span>Shipping &amp; fulfillment</span><span class='v'>&minus;" + fmt$(ship$,2) + "</span></div>" +
+      "<div class='po-row'><span>Processing fees</span><span class='v'>&minus;" + fmt$(fees$,2) + "</span></div>" +
+      (retCost > 0 ? "<div class='po-row'><span>Returns (averaged per order)</span><span class='v'>&minus;" + fmt$(retCost,2) + "</span></div>" : "") +
+      "<div class='po-row'><span>Contribution before ads</span><span class='v'>" + fmt$(contrib,2) + "</span></div>" +
+      "<div class='po-row'><span>Ad spend per order at " + fmtX(roas) + " blended</span><span class='v'>&minus;" + fmt$(spendPO,2) + "</span></div>" +
+      "<div class='po-row total'><span>" + (profitPO >= 0 ? "Profit" : "Loss") + " per order after ads</span><span class='v " + (profitPO >= 0 ? "good" : "bad") + "'>" + fmt$(profitPO,2) + "</span></div>";
+    $("po-table").innerHTML = poRows;
 
     // Waterfall: shares of $100 collected revenue.
     var base = netAOV;
@@ -628,7 +665,7 @@
     });
     $(bandId).className = "band " + (bandId==="band-good"?"active-good":bandId==="band-warn"?"active-warn":"active-bad");
     $("verdict2").className = "verdict " + vClass;
-    $("v-tag").textContent = "Verdict: " + vTag;
+    $("v-tag").innerHTML = "<span class='pill " + (vClass==="v-good"?"pill-good":vClass==="v-warn"?"pill-warn":"pill-bad") + "'>" + vTag + "</span>";
     $("v-p1").innerHTML = vP1;
     $("v-p2").innerHTML = vP2;
 
