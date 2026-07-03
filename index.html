@@ -4,7 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The ROAS Reality Check</title>
-<meta name="description" content="Your real break-even ROAS, and how many creative tests your Meta budget can actually read. A free diagnostic for DTC brands. All math runs in your browser.">
+<meta name="description" content="Your real break-even ROAS, and how many creative tests your Meta budget can actually read. A free tool for DTC brands. All math runs in your browser.">
+<meta property="og:title" content="The ROAS Reality Check">
+<meta property="og:description" content="Your real break-even ROAS, and how many creative tests your Meta budget can actually read. Free, runs in your browser, nothing stored.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cvelq.github.io/roas-reality-check/">
+<meta name="twitter:card" content="summary">
 <style>
   :root{
     --paper:#FAFAF7;
@@ -218,6 +223,12 @@
   }
   .btn:hover{background:#0F573C}
   .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .cta-primary{
+    font-weight:700;font-size:16.5px;padding:14px 16px;margin:18px 0 14px;
+    background:var(--green-soft);border-left:3px solid var(--green);border-radius:4px;
+  }
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--green);font-weight:600}
+  .btn-ghost:hover{background:var(--green-soft)}
 
   footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
     font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -227,7 +238,7 @@
 <div class="wrap">
 
 <header>
-  <div class="eyebrow">Free diagnostic &middot; DTC brands on Meta</div>
+  <div class="eyebrow">Free tool &middot; DTC brands on Meta</div>
   <h1>The ROAS Reality Check</h1>
   <p class="lede">Most DTC founders celebrate a ROAS that sits below their real break-even. Two minutes with your own numbers tells you whether you're one of them, and whether your creative testing can actually be trusted.</p>
   <p class="privacy">All the math runs in your browser. Nothing you type is stored or sent anywhere.</p>
@@ -276,7 +287,7 @@
     <div class="fld">
       <label for="roas">Current blended ROAS</label>
       <div class="inwrap"><input type="number" id="roas" value="2.0" min="0.1" step="0.1" inputmode="decimal"></div>
-      <p class="hint">Total store revenue divided by total Meta spend, same period. Platform-attributed ROAS flatters; blended is the honest number.</p>
+      <p class="hint">Don't know it? Take your last 30 days of total store revenue and divide by Meta spend for the same window. Platform-attributed ROAS flatters; blended is the honest number.</p>
     </div>
     <div class="fld">
       <label for="margin">Target net margin on ad revenue</label>
@@ -338,13 +349,18 @@
   <div class="grid">
     <div class="fld">
       <label for="budget">Daily Meta budget</label>
-      <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="budget" value="300" min="1" step="10" inputmode="decimal"></div>
+      <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="budget" value="500" min="1" step="10" inputmode="decimal"></div>
       <p class="hint">Average daily spend across the account.</p>
     </div>
     <div class="fld">
       <label for="tests">New creatives tested per week</label>
       <div class="inwrap"><input type="number" id="tests" value="3" min="0" step="1" inputmode="numeric"></div>
       <p class="hint">Net-new concepts or variants launched weekly.</p>
+    </div>
+    <div class="fld">
+      <label for="attrconv">Purchases from Meta, last 7 days</label>
+      <div class="inwrap"><input type="number" id="attrconv" min="0" step="1" inputmode="numeric" placeholder="optional"></div>
+      <p class="hint">From Ads Manager. Left empty, we estimate it from your blended ROAS, which can flatter (it counts organic and repeat revenue too).</p>
     </div>
   </div>
 
@@ -378,9 +394,10 @@
 
   <div class="cta">
     <p>I'm David. I run Meta ads and creative strategy for DTC brands. Most recently I took a brand from $10k to around $45k a month in six months, at roughly 3x the ad spend, with blended ROAS up from 0.95 to 2.28.</p>
-    <p>If your numbers came back leaky, happy to walk through a full leak map of your account. No pitch, just clarity.</p>
-    <a class="btn" href="mailto:cvetkovicd050@gmail.com?subject=ROAS%20Reality%20Check%20-%20leak%20map">Get a free leak map</a>
-    <p class="sig">Or reply wherever you found this link. Works too.</p>
+    <p>If your numbers came back leaky, I'll record you a short leak-map walkthrough of your account: the top three leaks I can see and what I'd test first. No pitch, just clarity.</p>
+    <p>Numbers came back healthy? Then the real question is whether your testing compounds week over week. Same offer, different starting point.</p>
+    <p class="cta-primary">Fastest path: reply wherever you found this link and ask for the leak map.</p>
+    <a class="btn btn-ghost" id="mailto-btn" href="mailto:cvetkovicd050@gmail.com?subject=ROAS%20Reality%20Check%20-%20leak%20map">Or email me directly</a>
   </div>
 </section>
 
@@ -395,7 +412,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var inputs = ["aov","cogs","ship","fees","roas","margin","ret","disc","budget","tests"];
+  var inputs = ["aov","cogs","ship","fees","roas","margin","ret","disc","budget","tests","attrconv"];
 
   // Published online card rates, as of July 2026.
   var PLATFORMS = {
@@ -542,15 +559,22 @@
         ? "Processing uses " + platform.label + "'s published online card rate as of July 2026 (" + (feesP*100).toFixed(1) + "% + " + Math.round(feeFixed*100) + "&cent; per transaction), charged on the collected amount and not refunded on returns. International cards and currency conversion add roughly 1 to 1.5% on top."
         : "Processing uses your custom rate, charged on the collected amount and not refunded on returns.") + "</li>" +
       "<li>Fixed costs (team, tools, rent) are not in this number. Your true all-in break-even is higher.</li>" +
+      "<li>This is first-order math. If repeat purchase or subscription is your model, buying below first-order break-even can be a deliberate strategy; your true target needs your 60 or 90-day LTV, not just the first order.</li>" +
       "</ul>";
 
     /* ---------- Stage 2 ---------- */
     var cpa = netAOV / roas;                 // spend per order at current blended ROAS
-    var weeklyConv = cpa > 0 ? (budget * 7) / cpa : 0;
+    var derivedWeekly = cpa > 0 ? (budget * 7) / cpa : 0;
+    var attr = num("attrconv", NaN);
+    var hasAttr = isFinite(attr) && attr > 0;
+    var weeklyConv = hasAttr ? attr : derivedWeekly;
+    var cpaShown = hasAttr ? (budget * 7) / attr : cpa;
     var readableCeil = Math.floor(weeklyConv / READABLE_CONV);
     var directionalCeil = Math.floor(weeklyConv / DIRECTIONAL_CONV);
 
-    $("conv-readout").textContent = "~" + Math.round(weeklyConv) + " purchases/week at ~" + fmt$(cpa,0) + " per order";
+    if(!hasAttr){ $("attrconv").placeholder = "~" + Math.round(derivedWeekly) + " (estimated)"; }
+    $("conv-readout").textContent = "~" + Math.round(weeklyConv) + " purchases/week at ~" + fmt$(cpaShown,0) + " per order" +
+      (hasAttr ? " · your Ads Manager number" : " · estimated from blended ROAS");
 
     var vTag, vP1, vP2, vClass, bandId;
     var perCreative = tests > 0 ? weeklyConv / tests : weeklyConv;
@@ -590,8 +614,9 @@
 
     $("how2").innerHTML =
       "<p>Your numbers, live:</p>" +
-      "<div class='frm'>Spend per order (blended)   = " + fmt$(netAOV,2) + " / " + fmtX(roas) + " ROAS = " + fmt$(cpa,2) + "\n" +
-      "Purchases per week          = $" + budget.toFixed(0) + "/day x 7 / " + fmt$(cpa,2) + " = ~" + Math.round(weeklyConv) + "\n" +
+      "<div class='frm'>" + (hasAttr
+        ? "Purchases per week          = " + Math.round(attr) + "  (your Ads Manager number)\nSpend per order             = $" + budget.toFixed(0) + "/day x 7 / " + Math.round(attr) + " = " + fmt$(cpaShown,2) + "\n"
+        : "Spend per order (blended)   = " + fmt$(netAOV,2) + " / " + fmtX(roas) + " ROAS = " + fmt$(cpa,2) + "\nPurchases per week          = $" + budget.toFixed(0) + "/day x 7 / " + fmt$(cpa,2) + " = ~" + Math.round(weeklyConv) + "  (estimated)\n") +
       "Fully readable tests/week   = " + Math.round(weeklyConv) + " / " + READABLE_CONV + " per creative = " + readableCeil + "\n" +
       "Directional tests/week      = " + Math.round(weeklyConv) + " / " + DIRECTIONAL_CONV + " per creative = " + directionalCeil + "</div>" +
       "<p>Why " + READABLE_CONV + " and " + DIRECTIONAL_CONV + ": reading a creative test means comparing conversion counts, and counts carry noise of roughly the square root of their size. Standard power math (two-proportion comparison at 90% confidence, 80% power) says a creative needs about 50 to 60 purchases before a ~50% performance gap reliably separates from luck. At about 20, only a 2x gap is readable. Below that, a winner call is a coin flip with extra steps.</p>" +
@@ -600,6 +625,10 @@
       "<li>This is a ceiling: it assumes every purchase your budget buys counts toward reading tests. Real accounts split spend between proven ads and tests, so your true read rate is lower.</li>" +
       "<li>It also assumes test budget spreads roughly evenly across new creatives, which takes a deliberate test structure rather than letting delivery decide.</li>" +
       "<li>Meta's learning-phase guidance (~50 conversions per ad set per week) is about delivery stability, not winner-calling. The thresholds here come from significance math, which is the stricter and more honest bar.</li>" +
+      "<li>" + (hasAttr
+        ? "You entered your Ads Manager purchase count, the stricter input. The estimate path (blended ROAS) would count organic and repeat revenue as if ads drove it."
+        : "The purchases number is estimated from your blended ROAS, which counts organic and repeat revenue as if ads drove it. That can overstate weekly purchases and flatter this verdict. If you know your Ads Manager purchase count, enter it above; it is the stricter, better input.") + "</li>" +
+      "<li>Why the two parts use different numbers: Part 1 runs on blended ROAS because unit economics answer to every dollar collected, wherever it came from. Part 2 prefers Ads-Manager-attributed purchases because test readability depends on the conversions your ads actually generated. Different questions, different honest numbers.</li>" +
       "</ul>";
   }
 
@@ -633,6 +662,15 @@
   }
   $("cogs-usd").addEventListener("click", function(){ setCogsMode(true); });
   $("cogs-pct").addEventListener("click", function(){ setCogsMode(false); });
+
+  // Per-channel source tag (?src=profile|proposal|post) -> mailto subject. No tracking, client-side only.
+  try {
+    var src = new URLSearchParams(location.search).get("src");
+    if(src && /^[a-z][a-z-]{0,19}$/.test(src)){
+      var mb = $("mailto-btn");
+      mb.href = mb.href + "%20via%20" + src;
+    }
+  } catch(e){}
 
   $("platform").addEventListener("change", function(){
     var custom = $("platform").value === "custom";
