@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The ROAS Reality Check</title>
+<meta name="description" content="Your real break-even ROAS, and how many creative tests your Meta budget can actually read. A free diagnostic for DTC brands. All math runs in your browser.">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --ink:#14211C;
+    --muted:#5B6A62;
+    --green:#146B4A;
+    --green-soft:#E4EFE9;
+    --amber:#9A6B00;
+    --amber-soft:#F4EBD6;
+    --red:#B93A26;
+    --red-soft:#F6E4DF;
+    --line:#D9DED6;
+    --field:#FFFFFF;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{transition:none !important;animation:none !important}
+  }
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:16.5px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:0 20px 96px}
+
+  /* ---------- header ---------- */
+  header{padding:56px 0 40px;border-bottom:1px solid var(--line)}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--green);margin-bottom:18px;
+  }
+  h1{
+    font-size:clamp(34px,7vw,56px);font-weight:800;letter-spacing:-.03em;line-height:1.02;
+    margin-bottom:18px;
+  }
+  .lede{max-width:56ch;color:var(--ink);font-size:18px}
+  .privacy{
+    margin-top:22px;font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    display:flex;gap:8px;align-items:baseline;
+  }
+  .privacy::before{content:"\25A3";color:var(--green);font-size:11px}
+
+  /* ---------- parts ---------- */
+  .part{padding:44px 0 8px}
+  .part-rule{
+    display:flex;align-items:baseline;gap:14px;margin-bottom:10px;
+  }
+  .part-rule .tag{
+    font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);white-space:nowrap;
+  }
+  .part-rule::after{content:"";flex:1;border-top:1px solid var(--line)}
+  h2{font-size:clamp(24px,4.5vw,32px);font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+  .part-intro{max-width:58ch;color:var(--muted);margin-bottom:28px}
+
+  /* ---------- inputs ---------- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+  @media (max-width:620px){.grid{grid-template-columns:1fr}}
+  .fld label{
+    display:block;font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink);margin-bottom:6px;
+  }
+  .inwrap{position:relative}
+  .inwrap .unit{
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    font-family:var(--mono);font-size:14px;color:var(--muted);pointer-events:none;
+  }
+  .inwrap .unit.right{left:auto;right:14px}
+  input[type="number"]{
+    width:100%;padding:12px 14px;font-family:var(--mono);font-size:17px;color:var(--ink);
+    background:var(--field);border:1px solid var(--line);border-radius:6px;
+    font-variant-numeric:tabular-nums;
+  }
+  input.has-unit{padding-left:30px}
+  input.has-unit-right{padding-right:34px}
+  input[type="number"]:focus-visible{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type="number"]{-moz-appearance:textfield;appearance:textfield}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+
+  details.adv{margin-top:18px;border:1px dashed var(--line);border-radius:6px;padding:0}
+  details.adv summary{
+    cursor:pointer;padding:12px 14px;font-family:var(--mono);font-size:12.5px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--muted);list-style:none;
+  }
+  details.adv summary::before{content:"+ ";color:var(--green)}
+  details.adv[open] summary::before{content:"\2212 "}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv .grid{padding:2px 14px 16px}
+
+  /* ---------- results ---------- */
+  .results{
+    margin-top:30px;border:1px solid var(--ink);border-radius:8px;background:var(--field);
+    overflow:hidden;
+  }
+  .res-head{
+    padding:10px 18px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  }
+  .res-main{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+  @media (max-width:620px){.res-main{grid-template-columns:1fr}}
+  .res-cell{padding:20px 18px}
+  .res-cell + .res-cell{border-left:1px solid var(--line)}
+  @media (max-width:620px){.res-cell + .res-cell{border-left:none;border-top:1px solid var(--line)}}
+  .res-label{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .res-num{
+    font-family:var(--mono);font-size:clamp(30px,6vw,40px);font-weight:600;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1;
+  }
+  .res-sub{font-size:13.5px;color:var(--muted);margin-top:6px}
+  .res-line{padding:16px 18px;font-size:15.5px;border-bottom:1px solid var(--line)}
+  .res-line:last-child{border-bottom:none}
+  .res-line strong{font-variant-numeric:tabular-nums}
+  .good{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)}
+
+  /* ---------- waterfall ---------- */
+  .wf{padding:18px}
+  .wf-title{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .wf-bar{display:flex;height:44px;border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+  .wf-seg{min-width:0;transition:width .35s ease}
+  .wf-seg.cogs{background:#31473E}
+  .wf-seg.ship{background:#5B6A62}
+  .wf-seg.fees{background:#8B978F}
+  .wf-seg.ret{background:#C4B49A}
+  .wf-seg.left.pos{background:var(--green)}
+  .wf-seg.left.neg{background:var(--red)}
+  .wf-legend{display:flex;flex-wrap:wrap;gap:12px 18px;margin-top:12px}
+  .wf-key{font-family:var(--mono);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+  .wf-key i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+  /* ---------- verdict gauge ---------- */
+  .gauge{padding:22px 18px 6px}
+  .bands{display:flex;height:52px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .band{flex:1;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);background:var(--field);border-left:1px solid var(--line);text-align:center;padding:0 6px}
+  .band:first-child{border-left:none}
+  .band.active-good{background:var(--green-soft);color:var(--green);font-weight:700}
+  .band.active-warn{background:var(--amber-soft);color:var(--amber);font-weight:700}
+  .band.active-bad{background:var(--red-soft);color:var(--red);font-weight:700}
+  .verdict{
+    margin:22px 18px 18px;padding:18px;border-radius:6px;border:1px solid var(--line);
+  }
+  .verdict.v-good{border-color:var(--green);background:var(--green-soft)}
+  .verdict.v-warn{border-color:var(--amber);background:var(--amber-soft)}
+  .verdict.v-bad{border-color:var(--red);background:var(--red-soft)}
+  .verdict .v-tag{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .v-good .v-tag{color:var(--green)} .v-warn .v-tag{color:var(--amber)} .v-bad .v-tag{color:var(--red)}
+  .verdict p{font-size:15.5px}
+  .verdict p + p{margin-top:8px}
+  .verdict strong{font-variant-numeric:tabular-nums}
+  .icp-note{margin:0 18px 18px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .icp-note::before{content:"\2192 ";color:var(--green)}
+
+  /* ---------- how calculated ---------- */
+  details.how{margin:0 18px 18px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+  details.how summary{
+    cursor:pointer;padding:12px 14px;font-family:var(--mono);font-size:12.5px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--ink);list-style:none;
+  }
+  details.how summary::before{content:"\25B8 ";color:var(--green)}
+  details.how[open] summary::before{content:"\25BE "}
+  details.how summary::-webkit-details-marker{display:none}
+  .how-body{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+  .how-body p{margin-bottom:10px}
+  .how-body .frm{
+    font-family:var(--mono);font-size:13px;background:var(--field);border:1px solid var(--line);
+    border-radius:5px;padding:10px 12px;margin:8px 0;overflow-x:auto;white-space:pre;
+    font-variant-numeric:tabular-nums;
+  }
+  .how-body ul{padding-left:18px;margin-bottom:10px}
+  .how-body li{margin-bottom:6px}
+  .how-body .asm{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+
+  /* ---------- reframe + cta ---------- */
+  .reframe{margin-top:64px;border-top:1px solid var(--ink);padding-top:44px}
+  .reframe h2{max-width:24ch}
+  .reframe p{max-width:58ch;margin-bottom:14px}
+  .cta{
+    margin-top:34px;border:1px solid var(--ink);border-radius:8px;background:var(--field);
+    padding:26px 24px;
+  }
+  .cta p{margin-bottom:14px;max-width:58ch}
+  .cta .sig{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .btn{
+    display:inline-block;margin:6px 0 14px;padding:13px 22px;border-radius:6px;
+    background:var(--green);color:#fff;text-decoration:none;font-weight:700;font-size:15.5px;
+  }
+  .btn:hover{background:#0F573C}
+  .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Free diagnostic &middot; DTC brands on Meta</div>
+  <h1>The ROAS Reality Check</h1>
+  <p class="lede">Most DTC founders celebrate a ROAS that sits below their real break-even. Two minutes with your own numbers tells you whether you're one of them, and whether your creative testing can actually be trusted.</p>
+  <p class="privacy">All the math runs in your browser. Nothing you type is stored or sent anywhere.</p>
+</header>
+
+<!-- ============ PART 1 ============ -->
+<section class="part" id="part1">
+  <div class="part-rule"><span class="tag">Part 1</span></div>
+  <h2>Your real break-even ROAS</h2>
+  <p class="part-intro">Break-even is not 1 divided by gross margin. Discounts, returns, shipping and fees all eat the number quietly. Example figures are pre-filled; replace them with yours.</p>
+
+  <div class="grid">
+    <div class="fld">
+      <label for="aov">Average order value</label>
+      <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="aov" value="60" min="1" step="1" inputmode="decimal"></div>
+      <p class="hint">Before any discount is applied.</p>
+    </div>
+    <div class="fld">
+      <label for="cogs">Product cost (COGS)</label>
+      <div class="inwrap"><input class="has-unit-right" type="number" id="cogs" value="35" min="0" max="95" step="1" inputmode="decimal"><span class="unit right">%</span></div>
+      <p class="hint">As a share of order value.</p>
+    </div>
+    <div class="fld">
+      <label for="ship">Shipping &amp; fulfillment per order</label>
+      <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="ship" value="8" min="0" step="0.5" inputmode="decimal"></div>
+      <p class="hint">Pick, pack and postage, per order shipped.</p>
+    </div>
+    <div class="fld">
+      <label for="fees">Payment &amp; platform fees</label>
+      <div class="inwrap"><input class="has-unit-right" type="number" id="fees" value="3" min="0" max="20" step="0.1" inputmode="decimal"><span class="unit right">%</span></div>
+      <p class="hint">Processor plus platform, as a share of the transaction.</p>
+    </div>
+    <div class="fld">
+      <label for="roas">Current blended ROAS</label>
+      <div class="inwrap"><input type="number" id="roas" value="2.0" min="0.1" step="0.1" inputmode="decimal"></div>
+      <p class="hint">Total store revenue divided by total Meta spend, same period. Platform-attributed ROAS flatters; blended is the honest number.</p>
+    </div>
+    <div class="fld">
+      <label for="margin">Target net margin on ad revenue</label>
+      <div class="inwrap"><input class="has-unit-right" type="number" id="margin" value="10" min="0" max="60" step="1" inputmode="decimal"><span class="unit right">%</span></div>
+      <p class="hint">The profit you want each ad dollar's revenue to keep.</p>
+    </div>
+  </div>
+
+  <details class="adv">
+    <summary>Advanced: returns &amp; discounts (most calculators skip these)</summary>
+    <div class="grid">
+      <div class="fld">
+        <label for="ret">Return / refund rate</label>
+        <div class="inwrap"><input class="has-unit-right" type="number" id="ret" value="0" min="0" max="60" step="0.5" inputmode="decimal"><span class="unit right">%</span></div>
+        <p class="hint">Share of orders refunded. Apparel often runs 15 to 30%.</p>
+      </div>
+      <div class="fld">
+        <label for="disc">Average discount rate</label>
+        <div class="inwrap"><input class="has-unit-right" type="number" id="disc" value="0" min="0" max="60" step="0.5" inputmode="decimal"><span class="unit right">%</span></div>
+        <p class="hint">Average markdown across orders (codes, sitewide sales).</p>
+      </div>
+    </div>
+  </details>
+
+  <div class="results" id="res1" aria-live="polite">
+    <div class="res-head"><span>Result &middot; contribution-margin basis</span><span id="cm-readout"></span></div>
+    <div class="res-main">
+      <div class="res-cell">
+        <div class="res-label">Break-even ROAS</div>
+        <div class="res-num" id="be-roas">&ndash;</div>
+        <div class="res-sub">Below this, every order loses money.</div>
+      </div>
+      <div class="res-cell">
+        <div class="res-label">Target ROAS <span id="tgt-label"></span></div>
+        <div class="res-num" id="tgt-roas">&ndash;</div>
+        <div class="res-sub" id="tgt-sub">What you need for your target margin.</div>
+      </div>
+    </div>
+    <div class="res-line" id="perk-line"></div>
+    <div class="res-line" id="stage1-verdict"></div>
+    <div class="wf">
+      <div class="wf-title">Where each $100 of collected revenue goes</div>
+      <div class="wf-bar" id="wf-bar" role="img" aria-label="Revenue breakdown bar"></div>
+      <div class="wf-legend" id="wf-legend"></div>
+    </div>
+    <details class="how">
+      <summary>How this is calculated</summary>
+      <div class="how-body" id="how1"></div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ PART 2 ============ -->
+<section class="part" id="part2">
+  <div class="part-rule"><span class="tag">Part 2</span></div>
+  <h2>The Coin-Flip Test</h2>
+  <p class="part-intro">Every creative test is read by counting purchases. Your budget caps how many purchases a week you have to count with, and that cap decides whether your winner calls are real or noise.</p>
+
+  <div class="grid">
+    <div class="fld">
+      <label for="budget">Daily Meta budget</label>
+      <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="budget" value="300" min="1" step="10" inputmode="decimal"></div>
+      <p class="hint">Average daily spend across the account.</p>
+    </div>
+    <div class="fld">
+      <label for="tests">New creatives tested per week</label>
+      <div class="inwrap"><input type="number" id="tests" value="3" min="0" step="1" inputmode="numeric"></div>
+      <p class="hint">Net-new concepts or variants launched weekly.</p>
+    </div>
+  </div>
+
+  <div class="results" id="res2" aria-live="polite">
+    <div class="res-head"><span>Result &middot; budget-limited ceiling</span><span id="conv-readout"></span></div>
+    <div class="gauge">
+      <div class="bands">
+        <div class="band" id="band-good">Readable</div>
+        <div class="band" id="band-warn">Directional</div>
+        <div class="band" id="band-bad">Coin-flip</div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict2">
+      <div class="v-tag" id="v-tag"></div>
+      <p id="v-p1"></p>
+      <p id="v-p2"></p>
+    </div>
+    <p class="icp-note" id="icp-note" hidden>You're spending in the range where a testing system compounds fastest. Wins at this volume stack week over week.</p>
+    <details class="how">
+      <summary>How this is calculated</summary>
+      <div class="how-body" id="how2"></div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ REFRAME + CTA ============ -->
+<section class="reframe">
+  <h2>Reading a test is not the same as learning from it.</h2>
+  <p>A readable test tells you which ad won this week. It does not tell you why it won, which angle to push next, or what three months of tests have already ruled out. That is a learning system, and it is the difference between creative that compounds and creative that starts from zero every campaign.</p>
+  <p>The numbers above are the first page of that system. The rest is finding where your funnel leaks the margin this calculator just measured, and running tests that feed every result back into the next brief.</p>
+
+  <div class="cta">
+    <p>I'm David. I run Meta ads and creative strategy for DTC brands. Most recently I took a brand from $10k to around $45k a month in six months, at roughly 3x the ad spend, with blended ROAS up from 0.95 to 2.28.</p>
+    <p>If your numbers came back leaky, happy to walk through a full leak map of your account. No pitch, just clarity.</p>
+    <a class="btn" href="mailto:cvetkovicd050@gmail.com?subject=ROAS%20Reality%20Check%20-%20leak%20map">Get a free leak map</a>
+    <p class="sig">Or reply wherever you found this link. Works too.</p>
+  </div>
+</section>
+
+<footer>
+  <span>The ROAS Reality Check &middot; David Cvetkovic</span>
+  <span>Runs locally in your browser. No tracking, no storage.</span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var inputs = ["aov","cogs","ship","fees","roas","margin","ret","disc","budget","tests"];
+
+  var fmt$ = function(n,dp){
+    if(dp===undefined) dp = 0;
+    var neg = n < 0;
+    var v = Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:dp,maximumFractionDigits:dp});
+    return (neg ? "-$" : "$") + v;
+  };
+  var fmtX = function(n){ return (Math.round(n*100)/100).toFixed(2); };
+  var fmtP = function(n,dp){ return (Math.round(n*Math.pow(10,dp===undefined?1:dp))/Math.pow(10,dp===undefined?1:dp)) + "%"; };
+
+  // Statistical band edges: conversions needed per creative to separate signal from noise.
+  // Basis: two-proportion power math at 90% confidence / 80% power.
+  // ~55 conversions resolves a ~50% relative performance gap; ~20 resolves only a ~2x gap.
+  var READABLE_CONV = 50;
+  var DIRECTIONAL_CONV = 20;
+
+  function num(id, fallback){
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : fallback;
+  }
+
+  function calc(){
+    var aov   = Math.max(num("aov",0), 0.01);
+    var cogsP = Math.min(Math.max(num("cogs",0),0),95)/100;
+    var ship  = Math.max(num("ship",0),0);
+    var feesP = Math.min(Math.max(num("fees",0),0),20)/100;
+    var roas  = Math.max(num("roas",0), 0.01);
+    var mTgt  = Math.min(Math.max(num("margin",0),0),60)/100;
+    var retP  = Math.min(Math.max(num("ret",0),0),60)/100;
+    var discP = Math.min(Math.max(num("disc",0),0),60)/100;
+    var budget= Math.max(num("budget",0),0);
+    var tests = Math.max(Math.round(num("tests",0)),0);
+
+    /* ---------- Stage 1 ---------- */
+    // Collected (net) revenue per order: price after average discount.
+    var netAOV = aov * (1 - discP);
+    // Revenue kept after refunds.
+    var keptRev = netAOV * (1 - retP);
+    // Costs per order placed: product cost (on gross AOV), shipping, processing on collected amount.
+    var cogs$  = aov * cogsP;
+    var ship$  = ship;
+    var fees$  = netAOV * feesP;
+    // Contribution per order placed.
+    var contrib = keptRev - cogs$ - ship$ - fees$;
+    // Contribution margin as share of collected revenue.
+    var cmPct = contrib / netAOV;
+
+    var beRoas = cmPct > 0 ? 1 / cmPct : NaN;
+    var tgtRoas = (cmPct - mTgt) > 0 ? 1 / (cmPct - mTgt) : NaN;
+
+    // Per $1,000 of spend at current blended ROAS.
+    var profitPerK = 1000 * (roas * cmPct - 1);
+
+    // Render stage 1
+    $("cm-readout").textContent = "Contribution margin: " + fmtP(cmPct*100,1) + " of collected revenue";
+    $("be-roas").textContent = isFinite(beRoas) ? fmtX(beRoas) : "n/a";
+    $("be-roas").className = "res-num";
+    $("tgt-label").textContent = "(at " + Math.round(mTgt*100) + "% margin)";
+    $("tgt-roas").textContent = isFinite(tgtRoas) ? fmtX(tgtRoas) : "n/a";
+
+    if(!isFinite(beRoas)){
+      $("perk-line").innerHTML = "Your unit costs exceed collected revenue per order. No ROAS is profitable at these numbers; the fix is price, cost or offer, not ads.";
+      $("perk-line").className = "res-line bad";
+      $("stage1-verdict").innerHTML = "";
+      $("stage1-verdict").className = "res-line";
+    } else {
+      var cls = profitPerK >= 0 ? "good" : "bad";
+      $("perk-line").innerHTML = "At your current blended ROAS of <strong>" + fmtX(roas) + "</strong>, every <strong>$1,000</strong> of ad spend " +
+        (profitPerK >= 0 ? "keeps <strong class='"+cls+"'>" + fmt$(profitPerK) + "</strong> after product, shipping, fees and returns."
+                         : "loses <strong class='"+cls+"'>" + fmt$(Math.abs(profitPerK)) + "</strong> after product, shipping, fees and returns.");
+      $("perk-line").className = "res-line";
+
+      var v1;
+      var v1cls = "res-line";
+      if(roas < beRoas){
+        v1 = "<strong class='bad'>Below break-even.</strong> Growth at this ROAS costs money on every order. Scaling spend scales the loss.";
+      } else if(isFinite(tgtRoas) && roas < tgtRoas){
+        v1 = "<strong class='warn'>Above water, below target.</strong> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account.";
+      } else {
+        v1 = "<strong class='good'>Your margin math holds.</strong> The next ceiling is whether your testing compounds. That is Part 2.";
+      }
+      $("stage1-verdict").innerHTML = v1;
+      $("stage1-verdict").className = v1cls;
+    }
+
+    // Waterfall: shares of $100 collected revenue.
+    var base = netAOV;
+    var wfCogs = Math.max(cogs$/base*100, 0);
+    var wfShip = Math.max(ship$/base*100, 0);
+    var wfFees = Math.max(fees$/base*100, 0);
+    var wfRet  = Math.max((netAOV-keptRev)/base*100, 0);
+    var wfLeft = 100 - wfCogs - wfShip - wfFees - wfRet;
+    var wfData = [
+      {k:"cogs", label:"Product",  v:wfCogs},
+      {k:"ship", label:"Shipping", v:wfShip},
+      {k:"fees", label:"Fees",     v:wfFees},
+      {k:"ret",  label:"Returns",  v:wfRet},
+      {k:"left", label:"Left for ads + profit", v:wfLeft}
+    ];
+    var totalShown = wfData.reduce(function(s,d){ return s + Math.max(d.v,0); }, 0);
+    var bar = "", leg = "";
+    wfData.forEach(function(d){
+      var w = Math.max(d.v,0) / totalShown * 100;
+      var extra = d.k === "left" ? (wfLeft >= 0 ? " pos" : " neg") : "";
+      if(d.v > 0.2 || d.k === "left"){
+        bar += "<div class='wf-seg " + d.k + extra + "' style='width:" + w + "%'></div>";
+      }
+      var swatch = d.k === "left" ? (wfLeft >= 0 ? "background:var(--green)" : "background:var(--red)") : "";
+      leg += "<span class='wf-key'><i class='" + (swatch ? "" : "") + "' style='" + (swatch || swatchColor(d.k)) + "'></i>" +
+             d.label + " " + fmtP(d.v,1) + "</span>";
+    });
+    $("wf-bar").innerHTML = bar;
+    $("wf-legend").innerHTML = leg;
+
+    // How-calculated, Stage 1, with the user's live numbers.
+    $("how1").innerHTML =
+      "<p>Everything below uses your numbers as typed. Change an input and this rewrites.</p>" +
+      "<div class='frm'>Collected revenue per order  = $" + aov.toFixed(2) + " x (1 - " + (discP*100).toFixed(1) + "% discount) = " + fmt$(netAOV,2) + "\n" +
+      "Kept after refunds           = " + fmt$(netAOV,2) + " x (1 - " + (retP*100).toFixed(1) + "% returns) = " + fmt$(keptRev,2) + "\n" +
+      "Costs per order              = " + fmt$(cogs$,2) + " product + " + fmt$(ship$,2) + " shipping + " + fmt$(fees$,2) + " fees\n" +
+      "Contribution per order       = " + fmt$(contrib,2) + "  (" + fmtP(cmPct*100,1) + " of collected revenue)\n" +
+      "Break-even ROAS              = 1 / " + fmtP(cmPct*100,1) + " = " + (isFinite(beRoas)?fmtX(beRoas):"n/a") + "\n" +
+      "Target ROAS at " + Math.round(mTgt*100) + "% margin   = 1 / (" + fmtP(cmPct*100,1) + " - " + Math.round(mTgt*100) + "%) = " + (isFinite(tgtRoas)?fmtX(tgtRoas):"n/a") + "</div>" +
+      "<p class='asm'>Assumptions, stated so you can disagree with them</p>" +
+      "<ul>" +
+      "<li>ROAS here means blended: total store revenue over total Meta spend. Platform-attributed ROAS overstates what ads earn.</li>" +
+      "<li>Returned orders refund the collected price; product and shipping costs on returned units are treated as not recovered. Conservative on purpose.</li>" +
+      "<li>Processing fees are charged on the collected amount and not refunded on returns.</li>" +
+      "<li>Fixed costs (team, tools, rent) are not in this number. Your true all-in break-even is higher.</li>" +
+      "</ul>";
+
+    /* ---------- Stage 2 ---------- */
+    var cpa = netAOV / roas;                 // spend per order at current blended ROAS
+    var weeklyConv = cpa > 0 ? (budget * 7) / cpa : 0;
+    var readableCeil = Math.floor(weeklyConv / READABLE_CONV);
+    var directionalCeil = Math.floor(weeklyConv / DIRECTIONAL_CONV);
+
+    $("conv-readout").textContent = "~" + Math.round(weeklyConv) + " purchases/week at ~" + fmt$(cpa,0) + " per order";
+
+    var vTag, vP1, vP2, vClass, bandId;
+    var perCreative = tests > 0 ? weeklyConv / tests : weeklyConv;
+
+    if(tests === 0){
+      vTag = "No tests running"; vClass = "v-warn"; bandId = "band-warn";
+      vP1 = "You're not launching new creatives, so nothing is being read at all. At your volume your budget could support up to <strong>" + readableCeil + "</strong> readable test" + (readableCeil===1?"":"s") + " per week.";
+      vP2 = readableCeil === 0 ? "At current volume, run one test at a time and let it collect for 2 or more weeks before judging." : "Fatigue is the cost of not testing: today's winner decays whether or not its replacement exists.";
+    } else if(readableCeil >= tests){
+      vTag = "Readable"; vClass = "v-good"; bandId = "band-good";
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Across <strong>" + tests + "</strong> new creative" + (tests===1?"":"s") + ", each can collect about <strong>" + Math.round(perCreative) + "</strong>, clear of the ~" + READABLE_CONV + " needed to separate a meaningfully better ad from noise.";
+      vP2 = "Your cadence fits your budget. The open question is no longer whether you can read tests. It's whether each result changes what you launch next.";
+    } else if(directionalCeil >= tests){
+      vTag = "Directional"; vClass = "v-warn"; bandId = "band-warn";
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Across <strong>" + tests + "</strong> new creatives, each collects about <strong>" + Math.round(perCreative) + "</strong>. Enough to spot a 2x winner, not enough to trust anything subtler.";
+      vP2 = "Your budget can fully read about <strong>" + readableCeil + "</strong> test" + (readableCeil===1?"":"s") + " a week. Cutting cadence toward that number turns weak reads into real ones without spending a dollar more.";
+    } else {
+      vTag = "Coin-flip"; vClass = "v-bad"; bandId = "band-bad";
+      var wasted = tests > 0 ? budget * 30.4 * Math.max(tests - readableCeil, 0) / tests : 0;
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Split across <strong>" + tests + "</strong> new creatives, each collects about <strong>" + Math.round(perCreative) + "</strong>. Below ~" + DIRECTIONAL_CONV + ", calling winners at that count is statistically closer to guessing than reading.";
+      vP2 = readableCeil >= 1
+        ? "Even if every purchase counted toward testing, your budget can fully read about <strong>" + readableCeil + "</strong> test" + (readableCeil===1?"":"s") + " a week. If budget spreads evenly across your current " + tests + ", roughly <strong>" + fmt$(wasted) + "</strong>/month is going to tests that can't be read. Fewer, bigger swings beat more, unreadable ones."
+        : "At your volume, even one test a week can't hit a readable count. Run one big swing at a time, let it collect for 2 or more weeks, and judge only large gaps.";
+    }
+
+    ["band-good","band-warn","band-bad"].forEach(function(b){
+      $(b).className = "band";
+    });
+    $(bandId).className = "band " + (bandId==="band-good"?"active-good":bandId==="band-warn"?"active-warn":"active-bad");
+    $("verdict2").className = "verdict " + vClass;
+    $("v-tag").textContent = "Verdict: " + vTag;
+    $("v-p1").innerHTML = vP1;
+    $("v-p2").innerHTML = vP2;
+
+    var monthly = budget * 30.4;
+    $("icp-note").hidden = !(monthly >= 15000 && monthly <= 50000);
+
+    $("how2").innerHTML =
+      "<p>Your numbers, live:</p>" +
+      "<div class='frm'>Spend per order (blended)   = " + fmt$(netAOV,2) + " / " + fmtX(roas) + " ROAS = " + fmt$(cpa,2) + "\n" +
+      "Purchases per week          = $" + budget.toFixed(0) + "/day x 7 / " + fmt$(cpa,2) + " = ~" + Math.round(weeklyConv) + "\n" +
+      "Fully readable tests/week   = " + Math.round(weeklyConv) + " / " + READABLE_CONV + " per creative = " + readableCeil + "\n" +
+      "Directional tests/week      = " + Math.round(weeklyConv) + " / " + DIRECTIONAL_CONV + " per creative = " + directionalCeil + "</div>" +
+      "<p>Why " + READABLE_CONV + " and " + DIRECTIONAL_CONV + ": reading a creative test means comparing conversion counts, and counts carry noise of roughly the square root of their size. Standard power math (two-proportion comparison at 90% confidence, 80% power) says a creative needs about 50 to 60 purchases before a ~50% performance gap reliably separates from luck. At about 20, only a 2x gap is readable. Below that, a winner call is a coin flip with extra steps.</p>" +
+      "<p class='asm'>Assumptions, stated so you can disagree with them</p>" +
+      "<ul>" +
+      "<li>This is a ceiling: it assumes every purchase your budget buys counts toward reading tests. Real accounts split spend between proven ads and tests, so your true read rate is lower.</li>" +
+      "<li>It also assumes test budget spreads roughly evenly across new creatives, which takes a deliberate test structure rather than letting delivery decide.</li>" +
+      "<li>Meta's learning-phase guidance (~50 conversions per ad set per week) is about delivery stability, not winner-calling. The thresholds here come from significance math, which is the stricter and more honest bar.</li>" +
+      "</ul>";
+  }
+
+  function swatchColor(k){
+    var map = {cogs:"background:#31473E", ship:"background:#5B6A62", fees:"background:#8B978F", ret:"background:#C4B49A"};
+    return map[k] || "";
+  }
+
+  inputs.forEach(function(id){
+    $(id).addEventListener("input", calc);
+  });
+  calc();
+})();
+</script>
+</body>
+</html>
