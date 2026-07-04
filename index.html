@@ -9,7 +9,8 @@
 <meta property="og:description" content="Your real break-even ROAS, and how many creative tests your Meta budget can actually read. Free, runs in your browser, nothing stored.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://cvelq.github.io/roas-reality-check/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://cvelq.github.io/roas-reality-check/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root{
     --paper:#FAFAF7;
@@ -275,7 +276,7 @@
     <div class="fld">
       <label for="aov">Average order value</label>
       <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="aov" value="60" min="1" step="1" inputmode="decimal"></div>
-      <p class="hint">Before any discount is applied.</p>
+      <p class="hint">Before discounts. If your AOV is already discount-net, leave the discount field at 0.</p>
     </div>
     <div class="fld">
       <label for="cogs">Product cost (COGS)</label>
@@ -412,7 +413,8 @@
       <p id="v-p1"></p>
       <p id="v-p2"></p>
     </div>
-    <p class="icp-note" id="icp-note" hidden>You're spending in the range where a testing system compounds fastest. Wins at this volume stack week over week.</p>
+    <p class="icp-note" id="ceiling-note">Both ceilings assume your full budget feeds testing. With scaled winners running, your practical capacity is lower.</p>
+    <p class="icp-note" id="icp-note"></p>
     <details class="how">
       <summary>How this is calculated</summary>
       <div class="how-body" id="how2"></div>
@@ -538,7 +540,7 @@
 
       var v1;
       if(roas < beRoas){
-        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss.";
+        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss. One exception: if you run subscriptions or strong repeat purchase, your true target sits lower than this first-order math; see the assumptions below.";
       } else if(isFinite(tgtRoas) && roas < tgtRoas){
         v1 = "<span class='pill pill-warn'>Above water, below target</span> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account.";
       } else {
@@ -613,6 +615,7 @@
         : "Processing uses your custom rate, charged on the collected amount and not refunded on returns.") + "</li>" +
       "<li>Fixed costs (team, tools, rent) are not in this number. Your true all-in break-even is higher.</li>" +
       "<li>This is first-order math. If repeat purchase or subscription is your model, buying below first-order break-even can be a deliberate strategy; your true target needs your 60 or 90-day LTV, not just the first order.</li>" +
+      "<li>All figures assume tax-exclusive amounts. If your AOV includes VAT or sales tax, strip it first or your margin will read better than it is.</li>" +
       "</ul>";
 
     /* ---------- Stage 2 ---------- */
@@ -630,8 +633,9 @@
     if(!hasAttr){ $("attrconv").placeholder = "~" + Math.round(derivedWeekly) + " (estimated)"; }
     $("conv-readout").textContent = "~" + Math.round(weeklyConv) + " purchases/week at ~" + fmt$(cpaShown,0) + " per order" +
       (hasAttr ? " · your Ads Manager number" : " · estimated from blended ROAS");
-    $("screen-cap").textContent = "~" + screenCeil + "/wk";
-    $("confirm-cap").textContent = confirmCeil >= 1 ? "~" + confirmCeil + "/wk" : "<1/wk";
+    var screenStr = screenCeil.toLocaleString("en-US");
+    $("screen-cap").textContent = "~" + screenStr + "/wk";
+    $("confirm-cap").textContent = confirmCeil >= 1 ? "~" + confirmCeil.toLocaleString("en-US") + "/wk" : "<1/wk";
 
     var confirmLine = confirmCeil >= 1
       ? "your budget confirms about <strong>" + confirmCeil + "</strong> winner" + (confirmCeil===1?"":"s") + " a week at ~" + CONFIRM_CONV + " purchases each. Crown nothing off a screen."
@@ -645,7 +649,7 @@
       vP2 = "Fatigue is the cost of not testing: today's winner decays whether or not its replacement exists.";
     } else if(cpasPerCreative >= SCREEN_CPAS){
       vTag = "Room to screen"; vClass = "v-good"; bandId = "band-good";
-      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv) + "</strong> purchases a week. Testing <strong>" + tests + "</strong> new creative" + (tests===1?"":"s") + " gives each one a fair audition (about <strong>" + (Math.round(cpasPerCreative*10)/10) + "</strong> CPAs of spend to prove itself). You have room to screen up to <strong>" + screenCeil + "</strong> a week, and volume is how outliers get found.";
+      vP1 = "Your spend generates about <strong>" + Math.round(weeklyConv).toLocaleString("en-US") + "</strong> purchases a week. Testing <strong>" + tests + "</strong> new creative" + (tests===1?"":"s") + " gives each one a fair audition (about <strong>" + (Math.round(cpasPerCreative*10)/10).toLocaleString("en-US") + "</strong> CPAs of spend to prove itself). You have room to screen up to <strong>" + screenStr + "</strong> a week, and volume is how outliers get found.";
       vP2 = "The line to hold: screening is not confirming. A screen tells you what to kill; " + confirmLine;
     } else if(cpasPerCreative >= STRETCH_CPAS){
       vTag = "Stretched"; vClass = "v-warn"; bandId = "band-warn";
@@ -669,8 +673,21 @@
     $("v-p1").innerHTML = vP1;
     $("v-p2").innerHTML = vP2;
 
+    // Stage-aware context line: the math is universal, the constraint it points at is not.
     var monthly = budget * 30.4;
-    $("icp-note").hidden = !(monthly >= 15000 && monthly <= 50000);
+    var tierMsg;
+    if(monthly < 3000){
+      tierMsg = "Under ~$3k/mo the constraint is usually one winning ad and a working offer, not testing volume. Use Part 1 to protect margin, and test one big swing at a time.";
+    } else if(monthly < 15000){
+      tierMsg = "You're entering the range where structured testing starts to compound. Build the screening habit now, before scale makes every lesson more expensive.";
+    } else if(monthly <= 50000){
+      tierMsg = "You're spending in the range where a testing system compounds fastest. Wins at this volume stack week over week.";
+    } else if(monthly <= 200000){
+      tierMsg = "At this volume, capacity stops being the ceiling and learning velocity becomes it. The bottleneck moves from reading tests to making each test teach the next one.";
+    } else {
+      tierMsg = "At your scale the capacity math is a floor, not a ceiling. Delivery fragmentation, incrementality and creative ops dominate; the question is whether your team compounds what it reads.";
+    }
+    $("icp-note").textContent = tierMsg;
 
     $("how2").innerHTML =
       "<p>Your numbers, live:</p>" +
@@ -725,12 +742,18 @@
   $("cogs-usd").addEventListener("click", function(){ setCogsMode(true); });
   $("cogs-pct").addEventListener("click", function(){ setCogsMode(false); });
 
-  // Per-channel source tag (?src=profile|proposal|post) -> mailto subject. No tracking, client-side only.
+  // Per-channel source tag (?src=profile|proposal|post). No tracking, client-side only.
+  // Upwork pre-contract contexts (proposal/profile/upwork) hide the direct-email button entirely:
+  // contact stays on-platform, per Upwork's circumvention rules.
   try {
     var src = new URLSearchParams(location.search).get("src");
     if(src && /^[a-z][a-z-]{0,19}$/.test(src)){
       var mb = $("mailto-btn");
-      mb.href = mb.href + "%20via%20" + src;
+      if(src === "proposal" || src === "profile" || src === "upwork"){
+        mb.style.display = "none";
+      } else {
+        mb.href = mb.href + "%20via%20" + src;
+      }
     }
   } catch(e){}
 
