@@ -41,19 +41,19 @@
   .wrap{max-width:780px;margin:0 auto;padding:0 20px 96px}
 
   /* ---------- header ---------- */
-  header{padding:56px 0 40px;border-bottom:1px solid var(--line)}
+  header{padding:48px 0 40px;border-bottom:1px solid var(--line);text-align:center}
   .eyebrow{
     font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--green);margin-bottom:18px;
+    color:var(--green);margin-bottom:20px;
   }
   h1{
-    font-size:clamp(34px,7vw,56px);font-weight:800;letter-spacing:-.03em;line-height:1.02;
-    margin-bottom:18px;
+    font-size:clamp(40px,9vw,64px);font-weight:800;letter-spacing:-.035em;line-height:1.0;
+    margin:0 auto 16px;max-width:14ch;
   }
-  .lede{max-width:56ch;color:var(--ink);font-size:18px}
+  .lede{max-width:40ch;margin:0 auto;color:var(--ink);font-size:18px}
   .privacy{
-    margin-top:22px;font-family:var(--mono);font-size:12.5px;color:var(--muted);
-    display:flex;gap:8px;align-items:baseline;
+    margin-top:20px;font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    display:flex;gap:8px;align-items:baseline;justify-content:center;
   }
   .privacy::before{content:"\25A3";color:var(--green);font-size:11px}
 
@@ -85,8 +85,9 @@
   .inwrap .unit.right{left:auto;right:14px}
   input[type="number"]{
     width:100%;padding:12px 14px;font-family:var(--mono);font-size:17px;color:var(--ink);
-    background:var(--field);border:1px solid var(--line);border-radius:6px;
-    font-variant-numeric:tabular-nums;
+    background:var(--field);border:1px solid var(--line);border-radius:8px;
+    font-variant-numeric:tabular-nums;box-shadow:0 1px 2px rgba(20,33,28,.05);
+    transition:border-color .15s ease;
   }
   input.has-unit{padding-left:30px}
   input.has-unit-right{padding-right:34px}
@@ -125,9 +126,11 @@
 
   /* ---------- results ---------- */
   .results{
-    margin-top:30px;border:1px solid var(--ink);border-radius:8px;background:var(--field);
-    overflow:hidden;
+    margin-top:30px;border:1px solid var(--ink);border-radius:12px;background:var(--field);
+    overflow:hidden;box-shadow:0 2px 12px rgba(20,33,28,.07);
   }
+  @keyframes tick{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}
+  .tick{animation:tick .3s ease}
   .res-head{
     padding:10px 18px;border-bottom:1px solid var(--line);
     font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
@@ -253,6 +256,35 @@
 
   footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
     font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+  /* ---------- mobile compression ---------- */
+  @media (max-width:620px){
+    header{padding:36px 0 32px}
+    .part{padding:34px 0 8px}
+    .grid{gap:13px 16px}
+    .hint{font-size:12px;margin-top:5px}
+    .fld label{font-size:11.5px}
+    .part-intro{font-size:15.5px;margin-bottom:22px}
+    .live-hint{margin:-12px 0 20px}
+    .band{font-size:10.5px;letter-spacing:.05em}
+    .res-head{font-size:11px}
+  }
+
+  /* ---------- sticky live bar (mobile) ---------- */
+  #live-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;display:none;
+    background:var(--field);border-top:1px solid var(--ink);
+    box-shadow:0 -4px 16px rgba(20,33,28,.10);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    font-family:var(--mono);font-size:13px;color:var(--ink);
+    align-items:center;justify-content:space-between;gap:10px;cursor:pointer;
+    font-variant-numeric:tabular-nums;
+  }
+  #live-bar .lb-val{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+  #live-bar .lb-val strong{white-space:nowrap}
+  #live-bar .pill{margin-right:0;padding:3px 10px;font-size:10.5px}
+  #live-bar .lb-go{color:var(--green);font-weight:700;white-space:nowrap;flex:none}
+  @media (max-width:680px){ #live-bar.on{display:flex} }
 </style>
 </head>
 <body>
@@ -260,9 +292,9 @@
 
 <header>
   <div class="eyebrow">Free tool &middot; DTC brands on Meta</div>
-  <h1>The ROAS Reality Check</h1>
-  <p class="lede">Most DTC founders celebrate a ROAS that sits below their real break-even. Two minutes with your own numbers tells you whether you're one of them, and whether your creative testing can actually be trusted.</p>
-  <p class="privacy">All the math runs in your browser. Nothing you type is stored or sent anywhere.</p>
+  <h1>The ROAS Reality&nbsp;Check</h1>
+  <p class="lede">Most DTC founders celebrate a ROAS that sits below their real break-even. Two minutes with your numbers tells you if you're one of them.</p>
+  <p class="privacy">All the math runs in your browser. Nothing is stored.</p>
 </header>
 
 <!-- ============ PART 1 ============ -->
@@ -367,7 +399,7 @@
 <section class="part" id="part2">
   <div class="part-rule"><span class="tag">Part 2</span></div>
   <h2>The Coin-Flip Test</h2>
-  <p class="part-intro">Testing more finds more winners. But only if each creative gets enough spend to prove itself, and only if you don't crown winners off tiny reads. Your budget sets both ceilings: how many creatives you can screen, and how many winners you can confirm.</p>
+  <p class="part-intro">Testing more finds more winners, but only if each creative gets enough spend to prove itself. Your budget sets two ceilings: how many creatives you can screen, and how many winners you can confirm.</p>
 
   <div class="grid">
     <div class="fld">
@@ -444,6 +476,11 @@
 
 </div>
 
+<div id="live-bar" role="button" tabindex="0" aria-label="Jump to results">
+  <span class="lb-val" id="lb-val"></span>
+  <span class="lb-go">Results &darr;</span>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -481,6 +518,18 @@
     var v = parseFloat($(id).value);
     return isFinite(v) ? v : fallback;
   }
+
+  function setTick(el, txt){
+    if(el.textContent !== txt){
+      el.textContent = txt;
+      el.classList.remove("tick");
+      void el.offsetWidth;
+      el.classList.add("tick");
+    }
+  }
+
+  // Sticky live bar state (mobile): filled by calc(), shown/hidden by the observer below.
+  var lb = { p1: "", p2: "", mode: null };
 
   function calc(){
     var aov   = Math.max(num("aov",0), 0.01);
@@ -521,10 +570,9 @@
 
     // Render stage 1
     $("cm-readout").textContent = "Contribution margin: " + fmtP(cmPct*100,1) + " of collected revenue";
-    $("be-roas").textContent = isFinite(beRoas) ? fmtX(beRoas) : "n/a";
-    $("be-roas").className = "res-num";
+    setTick($("be-roas"), isFinite(beRoas) ? fmtX(beRoas) : "n/a");
     $("tgt-label").textContent = "(at " + Math.round(mTgt*100) + "% margin)";
-    $("tgt-roas").textContent = isFinite(tgtRoas) ? fmtX(tgtRoas) : "n/a";
+    setTick($("tgt-roas"), isFinite(tgtRoas) ? fmtX(tgtRoas) : "n/a");
 
     if(!isFinite(beRoas)){
       $("perk-line").innerHTML = "Your unit costs exceed collected revenue per order. No ROAS is profitable at these numbers; the fix is price, cost or offer, not ads.";
@@ -634,8 +682,8 @@
     $("conv-readout").textContent = "~" + Math.round(weeklyConv) + " purchases/week at ~" + fmt$(cpaShown,0) + " per order" +
       (hasAttr ? " · your Ads Manager number" : " · estimated from blended ROAS");
     var screenStr = screenCeil.toLocaleString("en-US");
-    $("screen-cap").textContent = "~" + screenStr + "/wk";
-    $("confirm-cap").textContent = confirmCeil >= 1 ? "~" + confirmCeil.toLocaleString("en-US") + "/wk" : "<1/wk";
+    setTick($("screen-cap"), "~" + screenStr + "/wk");
+    setTick($("confirm-cap"), confirmCeil >= 1 ? "~" + confirmCeil.toLocaleString("en-US") + "/wk" : "<1/wk");
 
     var confirmLine = confirmCeil >= 1
       ? "your budget confirms about <strong>" + confirmCeil + "</strong> winner" + (confirmCeil===1?"":"s") + " a week at ~" + CONFIRM_CONV + " purchases each. Crown nothing off a screen."
@@ -672,6 +720,13 @@
     $("v-tag").innerHTML = "<span class='pill " + (vClass==="v-good"?"pill-good":vClass==="v-warn"?"pill-warn":"pill-bad") + "'>" + vTag + "</span>";
     $("v-p1").innerHTML = vP1;
     $("v-p2").innerHTML = vP2;
+
+    // Feed the mobile sticky bar (both parts), then let the observer decide which shows.
+    var p1PillCls = !isFinite(beRoas) || roas < beRoas ? "pill-bad" : (isFinite(tgtRoas) && roas < tgtRoas ? "pill-warn" : "pill-good");
+    var p1PillTxt = !isFinite(beRoas) ? "No profitable ROAS" : (roas < beRoas ? "Below break-even" : (isFinite(tgtRoas) && roas < tgtRoas ? "Below target" : "Margin holds"));
+    lb.p1 = "<strong>Break-even " + (isFinite(beRoas) ? fmtX(beRoas) : "n/a") + "</strong><span class='pill " + p1PillCls + "'>" + p1PillTxt + "</span>";
+    lb.p2 = "<strong>Screen ~" + screenStr + "/wk &middot; Confirm " + (confirmCeil >= 1 ? "~" + confirmCeil : "<1") + "/wk</strong><span class='pill " + (vClass==="v-good"?"pill-good":vClass==="v-warn"?"pill-warn":"pill-bad") + "'>" + vTag + "</span>";
+    renderBar();
 
     // Stage-aware context line: the math is universal, the constraint it points at is not.
     var monthly = budget * 30.4;
@@ -715,6 +770,35 @@
     var map = {cogs:"background:#31473E", ship:"background:#5B6A62", fees:"background:#8B978F", ret:"background:#C4B49A"};
     return map[k] || "";
   }
+
+  // Sticky live bar: show while a part's inputs are on screen and its results card is not.
+  var vis = { part1:false, res1:false, part2:false, res2:false };
+  function renderBar(){
+    var bar = $("live-bar");
+    var mode = null;
+    if(vis.part2 && !vis.res2){ mode = "p2"; }
+    else if(vis.part1 && !vis.res1 && !vis.part2){ mode = "p1"; }
+    lb.mode = mode;
+    if(mode){ $("lb-val").innerHTML = lb[mode]; bar.classList.add("on"); }
+    else { bar.classList.remove("on"); }
+  }
+  if("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        var k = e.target.id === "part1" ? "part1" : e.target.id === "part2" ? "part2" : e.target.id === "res1" ? "res1" : "res2";
+        vis[k] = e.isIntersecting;
+      });
+      renderBar();
+    }, {threshold: 0.05});
+    ["part1","res1","part2","res2"].forEach(function(id){ io.observe($(id)); });
+  }
+  $("live-bar").addEventListener("click", function(){
+    var target = lb.mode === "p2" ? $("res2") : $("res1");
+    target.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  $("live-bar").addEventListener("keydown", function(e){
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); $("live-bar").click(); }
+  });
 
   inputs.forEach(function(id){
     $(id).addEventListener("input", calc);
