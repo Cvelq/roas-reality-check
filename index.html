@@ -251,8 +251,17 @@
     font-weight:700;font-size:16.5px;padding:14px 16px;margin:18px 0 14px;
     background:var(--green-soft);border-left:3px solid var(--green);border-radius:4px;
   }
-  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--green);font-weight:600}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--green);font-weight:600;cursor:pointer;font-size:15px;padding:12px 18px}
   .btn-ghost:hover{background:var(--green-soft)}
+  .cta-now{font-size:15.5px;margin-bottom:10px}
+  .cta-now strong{font-variant-numeric:tabular-nums}
+  .cta-scarcity{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:16px}
+  .email-row{display:flex;gap:10px;flex-wrap:wrap}
+  .v-link{
+    font-family:var(--mono);font-size:12.5px;color:var(--green);text-decoration:none;
+    border-bottom:1px solid var(--green);white-space:nowrap;
+  }
+  .v-link:hover{opacity:.75}
 
   footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
     font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -460,12 +469,17 @@
   <p>A screen tells you which creatives to kill. A confirmed winner tells you which ad won this week. Neither tells you why it won, which angle to push next, or what three months of tests have already ruled out. That is a learning system, and it is the difference between creative that compounds and creative that starts from zero every campaign.</p>
   <p>The numbers above are the first page of that system. The rest is finding where your funnel leaks the margin this calculator just measured, and running tests that feed every result back into the next brief.</p>
 
-  <div class="cta">
+  <div class="cta" id="cta">
     <p>I'm David. I run Meta ads and creative strategy for DTC brands. Most recently I took a brand from $10k to around $45k a month in six months, at roughly 3x the ad spend, with blended ROAS up from 0.95 to 2.28.</p>
-    <p>If your numbers came back leaky, I'll record you a short leak-map walkthrough of your account: the top three leaks I can see and what I'd test first. No pitch, just clarity.</p>
+    <p>If your numbers came back leaky, I'll record you a short leak-map walkthrough of your account: the top three leaks I can see and what I'd test first, <strong>within 48 hours</strong>. Free, because a few of these turn into client work. That's the whole deal. No pitch either way.</p>
     <p>Numbers came back healthy? Then the real question is whether your testing compounds week over week. Same offer, different starting point.</p>
-    <p class="cta-primary">Fastest path: reply wherever you found this link and ask for the leak map.</p>
-    <a class="btn btn-ghost" id="mailto-btn" href="mailto:cvetkovicd050@gmail.com?subject=ROAS%20Reality%20Check%20-%20leak%20map">Or email me directly</a>
+    <p class="cta-primary">Screenshot your results. Reply with it wherever you found this link, and your leak map lands within 48 hours.</p>
+    <p class="cta-now" id="why-now"></p>
+    <p class="cta-scarcity">I record every leak map myself, so they're capped at five a week. First come, first served.</p>
+    <div class="email-row" id="email-row">
+      <a class="btn btn-ghost" id="gmail-btn" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=cvetkovicd050@gmail.com&amp;su=ROAS%20Reality%20Check%20-%20leak%20map" target="_blank" rel="noopener">Email me (Gmail)</a>
+      <button class="btn btn-ghost" id="copy-btn" type="button">Copy address</button>
+    </div>
   </div>
 </section>
 
@@ -588,9 +602,9 @@
 
       var v1;
       if(roas < beRoas){
-        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss. One exception: if you run subscriptions or strong repeat purchase, your true target sits lower than this first-order math; see the assumptions below.";
+        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss. One exception: if you run subscriptions or strong repeat purchase, your true target sits lower than this first-order math; see the assumptions below. <a class='v-link' href='#cta'>See what I'd check first &darr;</a>";
       } else if(isFinite(tgtRoas) && roas < tgtRoas){
-        v1 = "<span class='pill pill-warn'>Above water, below target</span> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account.";
+        v1 = "<span class='pill pill-warn'>Above water, below target</span> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account. <a class='v-link' href='#cta'>See what I'd check first &darr;</a>";
       } else {
         v1 = "<span class='pill pill-good'>Margin math holds</span> The next ceiling is whether your testing compounds. That is Part 2.";
       }
@@ -721,6 +735,18 @@
     $("v-p1").innerHTML = vP1;
     $("v-p2").innerHTML = vP2;
 
+    // Why-now line (the reason is their own math, not an invented one).
+    var whyNow;
+    if(isFinite(beRoas) && roas < beRoas){
+      var monthlyLeak = Math.abs(1000 * (roas * cmPct - 1)) * (budget * 30.4 / 1000);
+      whyNow = "Why now: at your numbers, roughly <strong>" + fmt$(monthlyLeak) + "</strong> leaks every month you wait.";
+    } else if(!isFinite(beRoas)){
+      whyNow = "Why now: at these unit economics, every order costs you money regardless of ROAS. That is a today problem.";
+    } else {
+      whyNow = "Why now: winners decay every week they run. A library that compounds starts whenever you start it.";
+    }
+    $("why-now").innerHTML = whyNow;
+
     // Feed the mobile sticky bar (both parts), then let the observer decide which shows.
     var p1PillCls = !isFinite(beRoas) || roas < beRoas ? "pill-bad" : (isFinite(tgtRoas) && roas < tgtRoas ? "pill-warn" : "pill-good");
     var p1PillTxt = !isFinite(beRoas) ? "No profitable ROAS" : (roas < beRoas ? "Below break-even" : (isFinite(tgtRoas) && roas < tgtRoas ? "Below target" : "Margin holds"));
@@ -826,17 +852,30 @@
   $("cogs-usd").addEventListener("click", function(){ setCogsMode(true); });
   $("cogs-pct").addEventListener("click", function(){ setCogsMode(false); });
 
+  // Copy-address fallback (works for any mail provider).
+  $("copy-btn").addEventListener("click", function(){
+    var btn = $("copy-btn");
+    var done = function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy address"; }, 1800); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText("cvetkovicd050@gmail.com").then(done);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = "cvetkovicd050@gmail.com"; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); document.body.removeChild(ta); done();
+    }
+  });
+
   // Per-channel source tag (?src=profile|proposal|post). No tracking, client-side only.
-  // Upwork pre-contract contexts (proposal/profile/upwork) hide the direct-email button entirely:
+  // Upwork pre-contract contexts (proposal/profile/upwork) hide the direct-email row entirely:
   // contact stays on-platform, per Upwork's circumvention rules.
   try {
     var src = new URLSearchParams(location.search).get("src");
     if(src && /^[a-z][a-z-]{0,19}$/.test(src)){
-      var mb = $("mailto-btn");
       if(src === "proposal" || src === "profile" || src === "upwork"){
-        mb.style.display = "none";
+        $("email-row").style.display = "none";
       } else {
-        mb.href = mb.href + "%20via%20" + src;
+        var gb = $("gmail-btn");
+        gb.href = gb.href + "%20via%20" + src;
       }
     }
   } catch(e){}
