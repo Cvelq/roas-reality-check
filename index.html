@@ -739,7 +739,7 @@
     var whyNow;
     if(isFinite(beRoas) && roas < beRoas){
       var monthlyLeak = Math.abs(1000 * (roas * cmPct - 1)) * (budget * 30.4 / 1000);
-      whyNow = "Why now: at your numbers, roughly <strong>" + fmt$(monthlyLeak) + "</strong> leaks every month you wait.";
+      whyNow = "Why now: at your numbers, roughly <strong>" + fmt$(monthlyLeak) + "</strong> leaks every month you wait (at your $" + Math.round(budget).toLocaleString("en-US") + "/day budget and current ROAS).";
     } else if(!isFinite(beRoas)){
       whyNow = "Why now: at these unit economics, every order costs you money regardless of ROAS. That is a today problem.";
     } else {
@@ -873,6 +873,9 @@
     if(src && /^[a-z][a-z-]{0,19}$/.test(src)){
       if(src === "proposal" || src === "profile" || src === "upwork"){
         $("email-row").style.display = "none";
+        if(src === "profile" || src === "upwork"){
+          document.querySelector(".cta-primary").textContent = "Screenshot your results and send it to me in an Upwork message. Your leak map lands within 48 hours.";
+        }
       } else {
         var gb = $("gmail-btn");
         gb.href = gb.href + "%20via%20" + src;
