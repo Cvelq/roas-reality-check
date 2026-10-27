@@ -345,7 +345,7 @@
         <option value="custom">Custom rate&hellip;</option>
       </select>
       <div class="inwrap" id="custom-fee-wrap" hidden><input class="has-unit-right" type="number" id="fees" value="3" min="0" max="20" step="0.1" inputmode="decimal"><span class="unit right">%</span></div>
-      <p class="hint" id="platform-hint">Published online card rates, as of July 2026.</p>
+      <p class="hint" id="platform-hint">Published online card rates, as of October 2026.</p>
     </div>
     <div class="fld">
       <label for="roas">Current blended ROAS</label>
@@ -390,6 +390,7 @@
       </div>
     </div>
     <div class="res-line" id="perk-line"></div>
+    <div class="res-line" id="move-line"></div>
     <div class="res-line" id="stage1-verdict"></div>
     <div class="po" id="po-table"></div>
     <div class="wf">
@@ -404,9 +405,56 @@
   </div>
 </section>
 
-<!-- ============ PART 2 ============ -->
-<section class="part" id="part2">
+<!-- ============ PART 2: PAYBACK ============ -->
+<section class="part" id="partpb">
   <div class="part-rule"><span class="tag">Part 2</span></div>
+  <h2>Does a new customer pay you back?</h2>
+  <p class="part-intro">Part 1 is one order. This is one customer: what they cost you, what they bring back over a year, and how fast the cash returns. The standard worth holding: a new customer's cost paid back within 30 days.</p>
+
+  <div class="grid">
+    <div class="fld">
+      <label for="ncpa">New-customer CPA</label>
+      <div class="inwrap"><span class="unit">$</span><input class="has-unit" type="number" id="ncpa" min="0" step="1" inputmode="decimal" placeholder="optional"></div>
+      <p class="hint">What it costs to acquire one new customer, from Ads Manager. Left empty, we use the ad spend per order from Part 1, which flatters (blended ROAS counts repeat buyers too).</p>
+    </div>
+    <div class="fld">
+      <label for="r30">Customers who reorder within 30 days</label>
+      <div class="inwrap"><input class="has-unit-right" type="number" id="r30" value="5" min="0" max="100" step="0.5" inputmode="decimal"><span class="unit right">%</span></div>
+      <p class="hint">Of first-time buyers, the share who order again inside 30 days.</p>
+    </div>
+    <div class="fld">
+      <label for="orders12">Orders per customer over 12 months</label>
+      <div class="inwrap"><input type="number" id="orders12" value="1.5" min="1" step="0.1" inputmode="decimal"></div>
+      <p class="hint">Including the first order. 1.0 means nobody comes back.</p>
+    </div>
+  </div>
+
+  <div class="results" id="respb" aria-live="polite">
+    <div class="res-head"><span>Result &middot; one customer, first 12 months</span><span id="pb-readout"></span></div>
+    <div class="res-main">
+      <div class="res-cell">
+        <div class="res-label">30-day cash : CAC</div>
+        <div class="res-num" id="pb-30d">&ndash;</div>
+        <div class="res-sub">1.00 or more means the customer paid you back inside 30 days.</div>
+      </div>
+      <div class="res-cell">
+        <div class="res-label">LTGP : CAC, 12 months</div>
+        <div class="res-num" id="pb-ltv">&ndash;</div>
+        <div class="res-sub">Gross profit a customer brings in a year, per dollar spent to get them.</div>
+      </div>
+    </div>
+    <div class="res-line" id="pb-verdict"></div>
+    <div class="res-line" id="pb-line"></div>
+    <details class="how">
+      <summary>How this is calculated</summary>
+      <div class="how-body" id="howpb"></div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ PART 3 ============ -->
+<section class="part" id="part2">
+  <div class="part-rule"><span class="tag">Part 3</span></div>
   <h2>The Coin-Flip Test</h2>
   <p class="part-intro">Testing more finds more winners, but only if each creative gets enough spend to prove itself. Your budget sets two ceilings: how many creatives you can screen, and how many winners you can confirm.</p>
 
@@ -499,9 +547,9 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var inputs = ["aov","cogs","ship","fees","roas","margin","ret","disc","budget","tests","attrconv"];
+  var inputs = ["aov","cogs","ship","fees","roas","margin","ret","disc","ncpa","r30","orders12","budget","tests","attrconv"];
 
-  // Published online card rates, as of July 2026.
+  // Published online card rates, as of October 2026.
   var PLATFORMS = {
     "shopify-basic":    {label:"Shopify Basic",    pct:0.029, fixed:0.30},
     "shopify-grow":     {label:"Shopify Grow",     pct:0.027, fixed:0.30},
@@ -543,7 +591,7 @@
   }
 
   // Sticky live bar state (mobile): filled by calc(), shown/hidden by the observer below.
-  var lb = { p1: "", p2: "", mode: null };
+  var lb = { p1: "", pb: "", p2: "", mode: null };
 
   function calc(){
     var aov   = Math.max(num("aov",0), 0.01);
@@ -591,6 +639,8 @@
     if(!isFinite(beRoas)){
       $("perk-line").innerHTML = "Your unit costs exceed collected revenue per order. No ROAS is profitable at these numbers; the fix is price, cost or offer, not ads.";
       $("perk-line").className = "res-line bad";
+      $("move-line").innerHTML = "";
+      $("move-line").style.display = "none";
       $("stage1-verdict").innerHTML = "<span class='pill pill-bad'>No profitable ROAS</span>";
       $("stage1-verdict").className = "res-line";
     } else {
@@ -600,13 +650,22 @@
                          : "loses <strong class='"+cls+"'>" + fmt$(Math.abs(profitPerK)) + "</strong> after product, shipping, fees and returns.");
       $("perk-line").className = "res-line";
 
+      // The required move: break-even ad spend per order is the contribution itself.
+      var spendNow = netAOV / roas;
+      if(spendNow > contrib){
+        $("move-line").innerHTML = "To break even, ad spend per order has to fall from <strong>" + fmt$(spendNow,2) + "</strong> to <strong>" + fmt$(contrib,2) + "</strong> (" + fmtP((1 - contrib/spendNow)*100,0).replace(/^/,"&minus;") + "), or contribution per order has to rise by <strong>" + fmt$(spendNow - contrib,2) + "</strong>. That is the size of the job, whether it comes from creative, the page, the price or the offer.";
+      } else {
+        $("move-line").innerHTML = "You have <strong>" + fmt$(contrib - spendNow,2) + "</strong> of room per order: ad spend could rise from <strong>" + fmt$(spendNow,2) + "</strong> to <strong>" + fmt$(contrib,2) + "</strong> before an order stops paying for itself.";
+      }
+      $("move-line").style.display = "";
+
       var v1;
       if(roas < beRoas){
-        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss. One exception: if you run subscriptions or strong repeat purchase, your true target sits lower than this first-order math; see the assumptions below. <a class='v-link' href='#cta'>See what I'd check first &darr;</a>";
+        v1 = "<span class='pill pill-bad'>Below break-even</span> Growth at this ROAS costs money on every order. Scaling spend scales the loss. One exception: if you run subscriptions or strong repeat purchase, your true target sits lower than this first-order math; Part 2 shows whether repeat orders pay it back. <a class='v-link' href='#cta'>See what I'd check first &darr;</a>";
       } else if(isFinite(tgtRoas) && roas < tgtRoas){
         v1 = "<span class='pill pill-warn'>Above water, below target</span> You clear break-even but not your " + Math.round(mTgt*100) + "% margin goal. The gap usually hides in the middle of the funnel, not the ad account. <a class='v-link' href='#cta'>See what I'd check first &darr;</a>";
       } else {
-        v1 = "<span class='pill pill-good'>Margin math holds</span> The next ceiling is whether your testing compounds. That is Part 2.";
+        v1 = "<span class='pill pill-good'>Margin math holds</span> Next: whether a new customer pays you back (Part 2), then whether your testing compounds (Part 3).";
       }
       $("stage1-verdict").innerHTML = v1;
       $("stage1-verdict").className = "res-line";
@@ -673,14 +732,79 @@
       "<li>ROAS here means blended: total store revenue over total Meta spend. Platform-attributed ROAS overstates what ads earn.</li>" +
       "<li>Returned orders refund the collected price; product and shipping costs on returned units are treated as not recovered. Conservative on purpose.</li>" +
       "<li>" + (platform
-        ? "Processing uses " + platform.label + "'s published online card rate as of July 2026 (" + (feesP*100).toFixed(1) + "% + " + Math.round(feeFixed*100) + "&cent; per transaction), charged on the collected amount and not refunded on returns. International cards and currency conversion add roughly 1 to 1.5% on top."
+        ? "Processing uses " + platform.label + "'s published online card rate as of October 2026 (" + (feesP*100).toFixed(1) + "% + " + Math.round(feeFixed*100) + "&cent; per transaction), charged on the collected amount and not refunded on returns. International cards and currency conversion add roughly 1 to 1.5% on top."
         : "Processing uses your custom rate, charged on the collected amount and not refunded on returns.") + "</li>" +
       "<li>Fixed costs (team, tools, rent) are not in this number. Your true all-in break-even is higher.</li>" +
-      "<li>This is first-order math. If repeat purchase or subscription is your model, buying below first-order break-even can be a deliberate strategy; your true target needs your 60 or 90-day LTV, not just the first order.</li>" +
+      "<li>This is first-order math. If repeat purchase or subscription is your model, buying below first-order break-even can be a deliberate strategy; Part 2 runs the repeat-order math.</li>" +
       "<li>All figures assume tax-exclusive amounts. If your AOV includes VAT or sales tax, strip it first or your margin will read better than it is.</li>" +
       "</ul>";
 
-    /* ---------- Stage 2 ---------- */
+    /* ---------- Payback (Part 2) ---------- */
+    var ncpaIn = num("ncpa", NaN);
+    var hasNcpa = isFinite(ncpaIn) && ncpaIn > 0;
+    var cac = hasNcpa ? ncpaIn : netAOV / roas;
+    var r30 = Math.min(Math.max(num("r30",0),0),100)/100;
+    var o12 = Math.max(num("orders12",1),1);
+    var rep12 = o12 - 1;                     // repeat orders per customer in 12 months
+    var rep30 = Math.min(r30, rep12);        // 30-day reorders can't exceed the year's repeats
+    var cash30 = contrib * (1 + rep30);
+    var ltgp = contrib * o12;
+    var r30x = cash30 / cac, rLtv = ltgp / cac;
+    var pbTag, pbCls, pbMonth = null;
+    if(contrib <= 0){
+      pbTag = "No payback"; pbCls = "pill-bad";
+    } else if(contrib >= cac){
+      pbTag = "Paid back on the first order"; pbCls = "pill-good";
+    } else if(cash30 >= cac){
+      pbTag = "Paid back inside 30 days"; pbCls = "pill-good";
+    } else if(ltgp >= cac){
+      var perMonth = contrib * (rep12 - rep30) / 11;   // later repeats spread evenly over months 2-12
+      pbMonth = Math.min(12, 1 + Math.ceil((cac - cash30) / perMonth));
+      pbTag = "Paid back in about month " + pbMonth; pbCls = "pill-warn";
+    } else {
+      pbTag = "Not paid back inside 12 months"; pbCls = "pill-bad";
+    }
+    setTick($("pb-30d"), contrib > 0 ? fmtX(r30x) : "n/a");
+    setTick($("pb-ltv"), contrib > 0 ? fmtX(rLtv) + " : 1" : "n/a");
+    $("pb-readout").textContent = "CAC ~" + fmt$(cac,0) + (hasNcpa ? " · your number" : " · estimated from blended ROAS");
+    var pbMsg;
+    if(contrib <= 0){
+      pbMsg = "Every order loses money before ads, so no customer can pay you back. Fix Part 1 first.";
+    } else if(pbCls === "pill-good"){
+      pbMsg = "This is the standard to hold: customers who pay back inside 30 days fund the next customers, so growth can pay for itself.";
+    } else if(pbCls === "pill-warn"){
+      pbMsg = "Each customer pays back, but slowly, so growth needs cash up front: you carry about " + (pbMonth - 1) + " month" + (pbMonth - 1 === 1 ? "" : "s") + " of acquisition cost on every new cohort. Price, bundles, the first-order offer and repeat purchase are the levers that pull this forward.";
+    } else {
+      pbMsg = "A year of repeat orders doesn't cover what the customer cost. Scaling spend here scales the loss; the fix is the model (price, offer, repeat purchase), not the ads.";
+    }
+    // Without a real new-customer CPA the verdict is only an estimate: show it amber, never green or red.
+    var pbEst = !hasNcpa && contrib > 0;
+    if(pbEst){
+      pbMsg = "On a CAC estimated from blended ROAS, this reads as: " + pbTag.toLowerCase() + ". Enter your new-customer CPA above for the real verdict.";
+      pbTag = "Estimate"; pbCls = "pill-warn";
+    }
+    $("pb-verdict").innerHTML = "<span class='pill " + pbCls + "'>" + pbTag + "</span> " + pbMsg;
+    $("pb-verdict").className = "res-line";
+    $("pb-line").innerHTML = contrib > 0
+      ? "Each new customer costs about <strong>" + fmt$(cac,2) + "</strong> and returns <strong>" + fmt$(cash30,2) + "</strong> of contribution in 30 days and <strong>" + fmt$(ltgp,2) + "</strong> over 12 months. Common DTC benchmarks put LTGP:CAC around 3:1." + (hasNcpa ? "" : " CAC here is estimated from blended ROAS, which counts repeat buyers as if ads drove them, so your real CAC is likely higher.")
+      : "";
+    $("howpb").innerHTML =
+      "<p>Your numbers, live:</p>" +
+      "<div class='frm'>CAC                          = " + (hasNcpa ? fmt$(cac,2) + "  (your new-customer CPA)" : fmt$(netAOV,2) + " / " + fmtX(roas) + " ROAS = " + fmt$(cac,2) + "  (estimated)") + "\n" +
+      "Contribution per order       = " + fmt$(contrib,2) + "  (from Part 1)\n" +
+      "30-day cash                  = " + fmt$(contrib,2) + " x (1 + " + (rep30*100).toFixed(1) + "% reorder) = " + fmt$(cash30,2) + "\n" +
+      "30-day cash : CAC            = " + fmt$(cash30,2) + " / " + fmt$(cac,2) + " = " + (contrib > 0 ? fmtX(r30x) : "n/a") + "\n" +
+      "12-month LTGP                = " + fmt$(contrib,2) + " x " + o12.toFixed(1) + " orders = " + fmt$(ltgp,2) + "\n" +
+      "LTGP : CAC                   = " + fmt$(ltgp,2) + " / " + fmt$(cac,2) + " = " + (contrib > 0 ? fmtX(rLtv) + " : 1" : "n/a") + "</div>" +
+      "<p class='asm'>Assumptions, stated so you can disagree with them</p>" +
+      "<ul>" +
+      "<li>Repeat orders are assumed to look like the average order in Part 1, with the same contribution. If repeat buyers spend more or skip the discount, your numbers are better than this.</li>" +
+      "<li>Reorders after day 30 are spread evenly over months 2 to 12 to estimate the payback month. Real repeat curves are usually front-loaded, so this tends to read late.</li>" +
+      "<li>LTGP here is 12 months of gross profit, not a full lifetime, and it uses contribution, not revenue. Revenue-based LTV makes every customer look better than they are.</li>" +
+      "<li>Fixed costs (team, tools, rent) are not in this number. A customer who pays back their CAC still has to help cover them.</li>" +
+      "</ul>";
+
+    /* ---------- Stage 2 (Part 3: the Coin-Flip Test) ---------- */
     var cpa = netAOV / roas;                 // spend per order at current blended ROAS
     var derivedWeekly = cpa > 0 ? (budget * 7) / cpa : 0;
     var attr = num("attrconv", NaN);
@@ -751,6 +875,7 @@
     var p1PillCls = !isFinite(beRoas) || roas < beRoas ? "pill-bad" : (isFinite(tgtRoas) && roas < tgtRoas ? "pill-warn" : "pill-good");
     var p1PillTxt = !isFinite(beRoas) ? "No profitable ROAS" : (roas < beRoas ? "Below break-even" : (isFinite(tgtRoas) && roas < tgtRoas ? "Below target" : "Margin holds"));
     lb.p1 = "<strong>Break-even " + (isFinite(beRoas) ? fmtX(beRoas) : "n/a") + "</strong><span class='pill " + p1PillCls + "'>" + p1PillTxt + "</span>";
+    lb.pb = "<strong>30-day " + (contrib > 0 ? fmtX(r30x) : "n/a") + " &middot; LTGP:CAC " + (contrib > 0 ? fmtX(rLtv) : "n/a") + "</strong><span class='pill " + pbCls + "'>" + (pbEst ? "Estimate" : pbCls === "pill-good" ? "Pays back" : pbCls === "pill-warn" ? "Slow payback" : "No payback") + "</span>";
     lb.p2 = "<strong>Screen ~" + screenStr + "/wk &middot; Confirm " + (confirmCeil >= 1 ? "~" + confirmCeil : "<1") + "/wk</strong><span class='pill " + (vClass==="v-good"?"pill-good":vClass==="v-warn"?"pill-warn":"pill-bad") + "'>" + vTag + "</span>";
     renderBar();
 
@@ -788,7 +913,7 @@
       "<li>" + (hasAttr
         ? "You entered your Ads Manager purchase count, the stricter input. The estimate path (blended ROAS) would count organic and repeat revenue as if ads drove it."
         : "The purchases number is estimated from your blended ROAS, which counts organic and repeat revenue as if ads drove it. That can overstate weekly purchases and flatter this verdict. If you know your Ads Manager purchase count, enter it above; it is the stricter, better input.") + "</li>" +
-      "<li>Why the two parts use different numbers: Part 1 runs on blended ROAS because unit economics answer to every dollar collected, wherever it came from. Part 2 prefers Ads-Manager-attributed purchases because test readability depends on the conversions your ads actually generated. Different questions, different honest numbers.</li>" +
+      "<li>Why the two parts use different numbers: Part 1 runs on blended ROAS because unit economics answer to every dollar collected, wherever it came from. Part 3 prefers Ads-Manager-attributed purchases because test readability depends on the conversions your ads actually generated. Different questions, different honest numbers.</li>" +
       "</ul>";
   }
 
@@ -798,12 +923,13 @@
   }
 
   // Sticky live bar: show while a part's inputs are on screen and its results card is not.
-  var vis = { part1:false, res1:false, part2:false, res2:false };
+  var vis = { part1:false, res1:false, partpb:false, respb:false, part2:false, res2:false };
   function renderBar(){
     var bar = $("live-bar");
     var mode = null;
     if(vis.part2 && !vis.res2){ mode = "p2"; }
-    else if(vis.part1 && !vis.res1 && !vis.part2){ mode = "p1"; }
+    else if(vis.partpb && !vis.respb && !vis.part2){ mode = "pb"; }
+    else if(vis.part1 && !vis.res1 && !vis.partpb && !vis.part2){ mode = "p1"; }
     lb.mode = mode;
     if(mode){ $("lb-val").innerHTML = lb[mode]; bar.classList.add("on"); }
     else { bar.classList.remove("on"); }
@@ -811,15 +937,14 @@
   if("IntersectionObserver" in window){
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(e){
-        var k = e.target.id === "part1" ? "part1" : e.target.id === "part2" ? "part2" : e.target.id === "res1" ? "res1" : "res2";
-        vis[k] = e.isIntersecting;
+        vis[e.target.id] = e.isIntersecting;
       });
       renderBar();
     }, {threshold: 0.05});
-    ["part1","res1","part2","res2"].forEach(function(id){ io.observe($(id)); });
+    ["part1","res1","partpb","respb","part2","res2"].forEach(function(id){ io.observe($(id)); });
   }
   $("live-bar").addEventListener("click", function(){
-    var target = lb.mode === "p2" ? $("res2") : $("res1");
+    var target = lb.mode === "p2" ? $("res2") : lb.mode === "pb" ? $("respb") : $("res1");
     target.scrollIntoView({behavior:"smooth", block:"start"});
   });
   $("live-bar").addEventListener("keydown", function(e){
@@ -888,7 +1013,7 @@
     $("custom-fee-wrap").hidden = !custom;
     $("platform-hint").textContent = custom
       ? "Processor plus platform, as a share of the transaction."
-      : "Published online card rates, as of July 2026.";
+      : "Published online card rates, as of October 2026.";
     calc();
   });
   calc();
